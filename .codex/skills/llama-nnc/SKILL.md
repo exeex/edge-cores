@@ -62,8 +62,8 @@ Set `PYTHON=/path/to/python` for the shell wrapper, or invoke
 
 ## Transformer-block profiling smoke
 
-Run the complete tiny Llama transformer block with compiler-owned per-node
-instrumentation:
+Run `example/llama/model/llama3_source.py` directly as the complete tiny Llama
+transformer block with compiler-owned per-node instrumentation:
 
 ```sh
 ./example/llama/profile.sh
@@ -94,7 +94,11 @@ After compiler or runtime changes, run:
 ```sh
 python3 -m unittest nnc.test_compiler
 ./example/llama/run.sh
-./example/llama/profile.sh
+./example/llama/test.sh
 ```
+
+The suite must cover every `example/llama/model/smoke_*.py` file and finish by
+profiling `llama3_source.py`. Require `harness.md` to report every row as PASS;
+do not maintain a silent skip list.
 
 Generated files belong under `example/llama/build/` and must remain untracked.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Software Harness"
+  short_description: "Run public bare-metal and Llama NNC regressions"
+  default_prompt: "Use $software-harness to run the complete public software regression and summarize its reports."

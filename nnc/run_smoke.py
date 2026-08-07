@@ -198,8 +198,9 @@ def write_profile(build_dir: Path, records: list[dict[str, int | str]]) -> None:
 
 
 def run(args: argparse.Namespace, build_dir: Path, expected: tuple[int, ...]) -> None:
-    subprocess.run([str(REPO_ROOT / "scripts/build-verilator.sh")], check=True,
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if not args.skip_verilator_build:
+        subprocess.run([str(REPO_ROOT / "scripts/build-verilator.sh")], check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     sim = Path(args.sim_exe) if args.sim_exe else REPO_ROOT / "build/verilator/obj/Vedge_soc_demo_tb"
     words = (build_dir / "llama.words").read_text().strip()
     dump = build_dir / "actual.hex"
@@ -232,6 +233,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-cycles", type=int, default=600000)
     parser.add_argument("--max-abs-error", type=float, default=0.05)
     parser.add_argument("--sim-exe")
+    parser.add_argument("--skip-verilator-build", action="store_true",
+                        help="reuse an already-built simulator (used by the suite harness)")
     return parser.parse_args()
 
 

@@ -109,6 +109,7 @@ inline void matmul_dispatch(Tensor<DType> y, Tensor<DType> lhs, Tensor<DType> rh
     const size_t out_cols = rhs_transposed
                                 ? rhs.shape.dims[0]
                                 : total_width / head_count;
+    const size_t lhs_row_stride = lhs.shape.dims[lhs.shape.rank - 1u];
     if ((k_cols % 8u) != 0u || (out_cols % 8u) != 0u) {
         return;
     }
@@ -145,12 +146,24 @@ inline void matmul_dispatch(Tensor<DType> y, Tensor<DType> lhs, Tensor<DType> rh
     size_t profile_lhs_issue = 0u;
     size_t profile_lhs_wait = 0u;
 
-    const size_t lhs_issue_begin = mm_read_cycle();
-    edge_dma_start(lhs.data, input_stage, numel(lhs) * sizeof(DType));
-    profile_lhs_issue += mm_read_cycle() - lhs_issue_begin;
-    const size_t lhs_final_wait_begin = mm_read_cycle();
-    edge_dma_sync();
-    profile_lhs_wait += mm_read_cycle() - lhs_final_wait_begin;
+    // Public tensors are contiguous [row, width] or [head, row, width].
+    // Tensor consumes [head, k_block, row, lane], so keep that packing private.
+    for (size_t global_k = 0; global_k < head_count * k_blocks; ++global_k) {
+        const size_t head = global_k / k_blocks;
+        const size_t k_blk = global_k % k_blocks;
+        const size_t head_offset = lhs_has_head_axis
+            ? head * rows * k_cols
+            : head * k_cols;
+        const size_t lhs_issue_begin = mm_read_cycle();
+        edge_dma_start_strided(
+            lhs.data + head_offset + k_blk * 8u,
+            input_stage + global_k * rows * 8u,
+            8u * sizeof(DType), lhs_row_stride * sizeof(DType), rows);
+        profile_lhs_issue += mm_read_cycle() - lhs_issue_begin;
+        const size_t lhs_wait_begin = mm_read_cycle();
+        edge_dma_sync();
+        profile_lhs_wait += mm_read_cycle() - lhs_wait_begin;
+    }
     const size_t profile_lhs_done = mm_read_cycle();
 
     if (rhs_transposed) {
@@ -223,12 +236,24 @@ inline void matmul_dispatch(Tensor<DType> y, Tensor<DType> lhs, Tensor<DType> rh
     const size_t profile_output_clean_done = mm_read_cycle();
     size_t profile_output_issue = 0u;
     size_t profile_output_wait = 0u;
-    const size_t output_issue_begin = mm_read_cycle();
-    edge_dma_start(output_stage, y.data, output_bytes);
-    profile_output_issue += mm_read_cycle() - output_issue_begin;
-    const size_t output_wait_begin = mm_read_cycle();
-    edge_dma_sync();
-    profile_output_wait += mm_read_cycle() - output_wait_begin;
+    // Tensor produces [head, out_block, row, lane]. Restore the public
+    // contiguous layout with one source-strided DMA per output row/head.
+    for (size_t head = 0; head < head_count; ++head) {
+        for (size_t row = 0; row < rows; ++row) {
+            const size_t output_issue_begin = mm_read_cycle();
+            DType *output_dst = rhs_transposed
+                ? y.data + (head * rows + row) * out_cols
+                : y.data + row * y.shape.dims[1] + head * out_cols;
+            edge_dma_start_strided(
+                output_stage + head * out_blocks * rows * 8u + row * 8u,
+                output_dst, 8u * sizeof(DType),
+                rows * 8u * sizeof(DType), out_blocks);
+            profile_output_issue += mm_read_cycle() - output_issue_begin;
+            const size_t output_wait_begin = mm_read_cycle();
+            edge_dma_sync();
+            profile_output_wait += mm_read_cycle() - output_wait_begin;
+        }
+    }
     const size_t profile_output_done = mm_read_cycle();
     edge_sim_printf("MATMUL_PHASE lhs=%lu(lhs_issue=%lu lhs_wait=%lu) tensor=%lu output_clean=%lu output_dma=%lu(out_issue=%lu out_wait=%lu) total=%lu\n",
            profile_lhs_done - profile_begin,

@@ -20,9 +20,19 @@ Profile every lowered node in the complete tiny Llama transformer block:
 ./example/llama/profile.sh
 ```
 
-The profiling smoke checks the BF16 result against PyTorch and writes
+The profiling smoke compiles `model/llama3_source.py` directly, checks its BF16
+result against PyTorch, and writes
 `profile.md`, `profile.tsv`, and `software-console.log` below
-`example/llama/build/smoke_transformer_prefix/`.
+`example/llama/build/llama3_source/`.
+
+Run every `model/smoke_*.py` case and the `llama3_source.py` profiling case:
+
+```sh
+./example/llama/test.sh
+```
+
+The suite writes its summary to `example/llama/build/harness/harness.md` and
+keeps one log per model in the same directory.
 
 Generated headers, weights, binaries, and logs are written below
 `example/llama/build/` and are not source files.

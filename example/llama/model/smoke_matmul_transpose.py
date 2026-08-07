@@ -11,13 +11,9 @@ from torch import Tensor
 def nnedge_matmul_transpose(lhs: Tensor, rhs: Tensor, head_count: int) -> Tensor:
     rows, width = lhs.shape
     head_width = width // head_count
-    lhs_heads = (lhs.view(head_count, head_width // 8, rows, 8)
-                 .permute(0, 2, 1, 3).contiguous().view(head_count, rows, head_width))
+    lhs_heads = lhs.view(rows, head_count, head_width).transpose(0, 1)
     rhs_heads = rhs.view(rhs.shape[0], head_count, head_width).transpose(0, 1)
-    output = torch.matmul(lhs_heads, rhs_heads.transpose(-2, -1))
-    return (output.view(head_count, rows, rhs.shape[0] // 8, 8)
-            .permute(0, 2, 1, 3).contiguous()
-            .view(head_count, rows, rhs.shape[0]))
+    return torch.matmul(lhs_heads, rhs_heads.transpose(-2, -1))
 
 
 @nnedge_matmul_transpose.register_fake
@@ -37,8 +33,6 @@ def make_example_args() -> tuple[Tensor, Tensor]:
     rhs = torch.arange(32 * 64, dtype=torch.float32).reshape(32, 64)
     x = (x.remainder(23) - 11) / 8
     rhs = (rhs.remainder(17) - 8) / 16
-    x = (x.view(32, 2, 4, 8).permute(1, 2, 0, 3)
-         .contiguous().view(32, 64))
     return x, rhs
 
 

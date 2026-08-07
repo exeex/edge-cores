@@ -11,16 +11,17 @@ from torch import Tensor
 
 
 @torch.library.custom_op("nnedge::attention", mutates_args=())
-def nnedge_attention(xq: Tensor, keys: Tensor, values: Tensor, params: Tensor) -> Tensor:
-    del params
+def nnedge_attention(xq: Tensor, keys: Tensor, values: Tensor,
+                     params: Tensor, head_count: int) -> Tensor:
+    del params, head_count
     scores = torch.matmul(xq, keys.transpose(-2, -1))
     probs = F.softmax(scores.float(), dim=-1).type_as(xq)
     return torch.matmul(probs, values)
 
 
 @nnedge_attention.register_fake
-def _(xq, keys, values, params):
-    del keys, params
+def _(xq, keys, values, params, head_count):
+    del keys, params, head_count
     return torch.empty_strided(xq.shape, xq.stride(), dtype=values.dtype, device=values.device)
 
 
@@ -46,7 +47,7 @@ class SmokeAttentionRmsNorm(nn.Module):
     def forward(self, xq: Tensor, keys: Tensor, values: Tensor, params: Tensor) -> Tensor:
         if self.pre_norm:
             xq = torch.ops.nnedge.rms_norm(xq, self.pre_weight, 1.0e-5)
-        context = torch.ops.nnedge.attention(xq, keys, values, params)
+        context = torch.ops.nnedge.attention(xq, keys, values, params, 1)
         return torch.ops.nnedge.rms_norm(context, self.weight, 1.0e-5)
 
 

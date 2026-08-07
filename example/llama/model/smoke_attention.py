@@ -9,22 +9,24 @@ from torch import Tensor
 
 
 @torch.library.custom_op("nnedge::attention", mutates_args=())
-def nnedge_attention(xq: Tensor, keys: Tensor, values: Tensor, mask_or_params: Tensor) -> Tensor:
+def nnedge_attention(xq: Tensor, keys: Tensor, values: Tensor,
+                     mask_or_params: Tensor, head_count: int) -> Tensor:
     del mask_or_params
+    del head_count
     scores = torch.matmul(xq, keys.transpose(-2, -1))
     probs = F.softmax(scores.float(), dim=-1).type_as(xq)
     return torch.matmul(probs, values)
 
 
 @nnedge_attention.register_fake
-def _(xq, keys, values, mask_or_params):
-    del keys, mask_or_params
+def _(xq, keys, values, mask_or_params, head_count):
+    del keys, mask_or_params, head_count
     return torch.empty_strided(xq.shape, xq.stride(), dtype=values.dtype, device=values.device)
 
 
 class SmokeAttention(nn.Module):
     def forward(self, xq: Tensor, keys: Tensor, values: Tensor, mask_or_params: Tensor) -> Tensor:
-        return torch.ops.nnedge.attention(xq, keys, values, mask_or_params)
+        return torch.ops.nnedge.attention(xq, keys, values, mask_or_params, 1)
 
 
 def make_example_args() -> tuple[Tensor, Tensor, Tensor, Tensor]:

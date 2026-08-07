@@ -10,14 +10,10 @@ from torch import Tensor
 @torch.library.custom_op("nnedge::matmul", mutates_args=())
 def nnedge_matmul(lhs: Tensor, rhs: Tensor, head_count: int) -> Tensor:
     heads, rows, head_width = lhs.shape
-    lhs = (lhs.view(heads, head_width // 8, rows, 8)
-           .permute(0, 2, 1, 3).contiguous().view(heads, rows, head_width))
     head_width = rhs.shape[1] // head_count
     rhs_heads = rhs.view(rhs.shape[0], head_count, head_width).transpose(0, 1)
     output_heads = torch.matmul(lhs, rhs_heads)
-    packed = (output_heads.view(head_count, rows, head_width // 8, 8)
-              .permute(0, 2, 1, 3).contiguous())
-    return packed.view(rows, rhs.shape[1])
+    return output_heads.transpose(0, 1).contiguous().view(rows, rhs.shape[1])
 
 
 @nnedge_matmul.register_fake
@@ -38,7 +34,6 @@ def make_example_args() -> tuple[Tensor, Tensor]:
     rhs = torch.arange(32 * 64, dtype=torch.float32).reshape(32, 64)
     x = (x.remainder(19) - 9) / 8
     rhs = (rhs.remainder(17) - 8) / 16
-    x = x.view(2, 32, 4, 8).permute(0, 2, 1, 3).contiguous().view(2, 32, 32)
     return x, rhs
 
 
