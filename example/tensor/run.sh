@@ -23,6 +23,7 @@ rm -f "${REPORT}" "${LOG}"
     "${SIM_EXE}" \
         "+mem128=${MEMH}" \
         "+mem128_words=${words}" \
+        +check_tensor_output \
         +pass_on_csr_break \
         +expected_return=0 \
         +max_cycles=500000 \

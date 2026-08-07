@@ -5,6 +5,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 "${REPO_ROOT}/scripts/build-cpp-example.sh" \
-    "${SCRIPT_DIR}/matmul64x64_128tokens_tiled_circular.cpp" \
-    "${EDGE_TENSOR_OUT:-${SCRIPT_DIR}/build}" \
-    matmul64x64_128tokens_tiled_circular
+    "${SCRIPT_DIR}/hello.cpp" \
+    "${EDGE_HELLO_OUT:-${SCRIPT_DIR}/build}" \
+    hello
