@@ -1,0 +1,4 @@
+interface:
+  display_name: "Edge Bring-up"
+  short_description: "Set up and navigate the edge-e3 workflows"
+  default_prompt: "Use $edge-bringup to set up this machine and answer the README example questions."
