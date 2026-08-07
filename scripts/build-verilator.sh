@@ -35,7 +35,7 @@ while IFS= read -r relative_path; do
     [[ -z "${relative_path}" || "${relative_path}" == \#* ]] && continue
     if [[ ! -f "${REPO_ROOT}/${relative_path}" ]]; then
         echo "error: SRAM model is missing: ${REPO_ROOT}/${relative_path}" >&2
-        echo "hint: initialize the private src/edge-e3 submodule or provide equivalent models" >&2
+        echo "hint: edge-e3enc must include its public SRAM boundary models" >&2
         exit 1
     fi
 done < "${SRAM_FILELIST}"

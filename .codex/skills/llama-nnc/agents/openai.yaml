@@ -1,0 +1,4 @@
+interface:
+  display_name: "Llama NNC"
+  short_description: "Build, validate, and profile edge-e3 NNC models"
+  default_prompt: "Use $llama-nnc to run and analyze the full transformer-block profiling smoke test."

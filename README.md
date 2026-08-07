@@ -75,6 +75,14 @@ Tensor utilization is `ideal MAC cycles / measured X30 loop cycles`.
 
 ## Development
 
+The smallest NNC end-to-end example exports a PyTorch linear model, runs it on
+the encrypted-core Verilator model, and compares its BF16 output with PyTorch:
+
+```sh
+python3 -m pip install -r nnc/requirements.txt
+./example/llama/run.sh
+```
+
 Install the [ChatGPT desktop app](https://learn.chatgpt.com/docs/app) and select
 Codex for software development, or use the
 [Codex IDE extension](https://learn.chatgpt.com/docs/codex/ide) in VS Code. Open

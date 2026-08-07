@@ -15,8 +15,13 @@ module edge_soc_demo_tb;
   integer cycle = 0;
   integer max_cycles = 500000;
   integer check_tensor_output_enable = 0;
+  integer dump_base = 0;
+  integer dump_len = 0;
+  integer dump_fd;
+  integer dump_i;
   integer report_fd;
   reg [4095:0] report_path = "run_case.report";
+  reg [4095:0] dump_path = "output.hex";
   wire core_csr_break_valid;
   wire [63:0] core_csr_break_code;
   wire [7:0] core_csr_break_seq_id;
@@ -86,6 +91,20 @@ module edge_soc_demo_tb;
     end
   endtask
 
+  task dump_output;
+    reg [127:0] dump_word;
+    begin
+      if (dump_len > 0) begin
+        dump_fd = $fopen(dump_path, "w");
+        for (dump_i = 0; dump_i < dump_len; dump_i = dump_i + 1) begin
+          dump_word = dut.soc_ram.mem[(dump_base >> 4) + (dump_i >> 4)];
+          $fdisplay(dump_fd, "%02x", dump_word[(dump_i & 15) * 8 +: 8]);
+        end
+        $fclose(dump_fd);
+      end
+    end
+  endtask
+
   edge_soc_top #(
     .ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH),
     .ID_WIDTH(ID_WIDTH), .LEN_WIDTH(LEN_WIDTH),
@@ -143,6 +162,9 @@ module edge_soc_demo_tb;
       report_path = "run_case.report";
     if ($test$plusargs("check_tensor_output"))
       check_tensor_output_enable = 1;
+    if (!$value$plusargs("dump_base=%d", dump_base)) dump_base = 0;
+    if (!$value$plusargs("dump_len=%d", dump_len)) dump_len = 0;
+    if (!$value$plusargs("dump_file=%s", dump_path)) dump_path = "output.hex";
     repeat (4) @(posedge clk);
     rst_b = 1'b1;
     @(negedge clk); core_start = 1'b1;
@@ -169,6 +191,7 @@ module edge_soc_demo_tb;
             $fatal(1, "EDGE_DEMO tensor output mismatch");
           end
         end
+        dump_output();
         write_report(1'b1, "pass");
         $display("EDGE_DEMO TEST PASS cycle=%0d seq=%0d epoch=%0d",
                  cycle, core_csr_break_seq_id, core_csr_break_epoch);

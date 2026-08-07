@@ -1051,7 +1051,7 @@ static inline void edge_actu_sync(void)
 template <int mode>
 static inline void edge_cmpu_setcsr()
 {
-    static_assert(mode >= 0 && mode <= 8, "cmpu mode must be 0..8");
+    static_assert(mode >= 0 && mode <= 9, "cmpu mode must be 0..9");
     __asm__ volatile(
         "# edge.cmpu.setcsr mode=%0\n"
         ".insn r 0x3f, 0, 0, x0, x0, x0\n"

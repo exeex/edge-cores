@@ -8,5 +8,6 @@ It is not an edge-e3, edge-e4, or edge-e5 product implementation. Product RTL
 must remain under its corresponding sibling directory; this tree should contain
 only reusable verification and integration infrastructure.
 
-The current harness selects `src/edge-e3`. Future e4/e5 enablement should make
-the product root configurable without duplicating this SoC environment.
+The public harness selects `src/edge-e3enc`; its encrypted RTL and SRAM boundary
+models are self-contained. Private source-tree harnesses may select another
+product root without duplicating this SoC environment.

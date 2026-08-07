@@ -1,7 +1,11 @@
 # Generated edge-e3 RTL
 
-`edge_e3enc.v` contains obfuscated non-SRAM RTL.
-Use `edge_e3enc_mixed.fl` for simulation, or combine the single RTL file with target-specific SRAM models/replacements for FPGA/OpenROAD.
+`edge_e3enc.v` contains obfuscated non-SRAM RTL. The synthesizable SRAM
+boundary models required by the public build are included in `sram/`; the
+public flow does not require `src/edge-e3`.
+
+Use `edge_e3enc_mixed.fl` for simulation, or combine the single RTL file with
+target-specific SRAM replacements for FPGA/OpenROAD.
 
 Generate from the repository root with:
 
