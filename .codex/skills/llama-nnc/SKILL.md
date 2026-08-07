@@ -10,7 +10,7 @@ encrypted core.
 
 ## Read first
 
-- Read `example/llama/README.md` for commands and artifact locations.
+- Read `example/llama/README.md` for the user-facing flow and artifact locations.
 - Read `nnc/compiler.py` before changing export, lowering, ABI, liveness, DRAM
   preferences, or weight packing.
 - Read the affected header in `cpp/libnn/` before changing an operator.
@@ -25,7 +25,7 @@ private RTL dependency, or old CMake harness. Use `cpp/libnn/`,
 
 For a semantic operator change:
 
-1. Define or update its PyTorch custom op in `example/llama/model/smoke_<op>.py`.
+1. Define or update its PyTorch custom op in `nnc/test/smoke_<op>.py`.
 2. Update target mapping, lowering metadata, shape inference, or weight packing
    in `nnc/compiler.py` only where needed.
 3. Render its C++ call in `ForwardRenderer`.
@@ -34,7 +34,7 @@ For a semantic operator change:
 
 ```sh
 python3 -m unittest nnc.test_compiler
-./example/llama/run.sh --model-file example/llama/model/smoke_<op>.py
+./example/llama/run.sh --model-file nnc/test/smoke_<op>.py
 ```
 
 Set `PYTHON=/path/to/python` for the shell wrapper, or invoke
@@ -69,8 +69,7 @@ transformer block with compiler-owned per-node instrumentation:
 ./example/llama/profile.sh
 ```
 
-This is equivalent to running `smoke_transformer_prefix.py` with its default
-`full` stage and `--profile`. The compiler measures immediately around each
+The compiler measures immediately around each
 lowered operator call, completes the final output copy, and prints all records
 afterward. Do not add temporary cycle reads or printf calls inside operators
 for node-level reports.
@@ -97,8 +96,9 @@ python3 -m unittest nnc.test_compiler
 ./example/llama/test.sh
 ```
 
-The suite must cover every `example/llama/model/smoke_*.py` file and finish by
-profiling `llama3_source.py`. Require `harness.md` to report every row as PASS;
-do not maintain a silent skip list.
+The suite must cover every `nnc/test/smoke_*.py` file and finish by profiling
+`nnc/test/llama3_source.py`. Keep that file byte-identical to the user-facing
+`example/llama/model/llama3_source.py`. Require `harness.md` to report every row
+as PASS; do not maintain a silent skip list.
 
 Generated files belong under `example/llama/build/` and must remain untracked.

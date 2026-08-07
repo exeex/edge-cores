@@ -13,7 +13,8 @@ import sys
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-MODEL_DIR = REPO_ROOT / "example/llama/model"
+TEST_DIR = REPO_ROOT / "nnc/test"
+EXAMPLE_MODEL = REPO_ROOT / "example/llama/model/llama3_source.py"
 DEFAULT_OUT = REPO_ROOT / "example/llama/build/harness"
 
 
@@ -85,8 +86,14 @@ def main() -> None:
     subprocess.run([str(REPO_ROOT / "scripts/build-verilator.sh")], check=True,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                    env=env)
-    models = sorted(MODEL_DIR.glob("smoke_*.py"))
-    models.append(MODEL_DIR / "llama3_source.py")
+    test_llama = TEST_DIR / "llama3_source.py"
+    if test_llama.read_bytes() != EXAMPLE_MODEL.read_bytes():
+        raise SystemExit(
+            "nnc/test/llama3_source.py is out of sync with "
+            "example/llama/model/llama3_source.py"
+        )
+    models = sorted(TEST_DIR.glob("smoke_*.py"))
+    models.append(test_llama)
     records = []
     for index, model in enumerate(models, 1):
         profile = model.name == "llama3_source.py"

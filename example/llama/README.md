@@ -1,6 +1,7 @@
 # Llama NNC example
 
-This example exports a small PyTorch model, lowers it through `nnc/compiler.py`,
+This example exports the tiny Llama 3 transformer block in
+`model/llama3_source.py`, lowers it through `nnc/compiler.py`,
 links the generated weights into a bare-metal RISC-V image, and checks the
 encrypted-core Verilator output against PyTorch.
 
@@ -10,7 +11,9 @@ python3 -m pip install -r nnc/requirements.txt
 ```
 
 Pass another model with `--model-file`, or generate and build without running
-the simulator with `./example/llama/build.sh`.
+the simulator with `./example/llama/build.sh`. Compiler regression models live
+under `nnc/test/`; this example intentionally contains only the user-facing
+Llama source model.
 
 Set `PYTHON=/path/to/python` when PyTorch is installed in a virtual environment.
 
@@ -25,7 +28,8 @@ result against PyTorch, and writes
 `profile.md`, `profile.tsv`, and `software-console.log` below
 `example/llama/build/llama3_source/`.
 
-Run every `model/smoke_*.py` case and the `llama3_source.py` profiling case:
+Run every `nnc/test/smoke_*.py` case and the copied `llama3_source.py`
+profiling case:
 
 ```sh
 ./example/llama/test.sh

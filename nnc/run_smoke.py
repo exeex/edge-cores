@@ -19,7 +19,7 @@ import torch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_MODEL = REPO_ROOT / "example/llama/model/smoke_linear.py"
+DEFAULT_MODEL = REPO_ROOT / "example/llama/model/llama3_source.py"
 DEFAULT_MAIN = REPO_ROOT / "example/llama/src/smoke_main.cpp"
 
 
@@ -230,7 +230,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--build-only", action="store_true")
     parser.add_argument("--profile", action="store_true")
     parser.add_argument("--output-base", type=lambda text: int(text, 0), default=0x100000)
-    parser.add_argument("--max-cycles", type=int, default=600000)
+    parser.add_argument("--max-cycles", type=int, default=2000000)
     parser.add_argument("--max-abs-error", type=float, default=0.05)
     parser.add_argument("--sim-exe")
     parser.add_argument("--skip-verilator-build", action="store_true",

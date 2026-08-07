@@ -1059,7 +1059,7 @@ def main() -> None:
     parser.add_argument(
         "--model-file",
         type=Path,
-        default=Path(__file__).resolve().parents[1] / "example" / "llama" / "model" / "smoke_linear.py",
+        default=Path(__file__).resolve().parents[1] / "example" / "llama" / "model" / "llama3_source.py",
     )
     args = parser.parse_args()
 

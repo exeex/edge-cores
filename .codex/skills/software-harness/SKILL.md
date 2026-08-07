@@ -14,7 +14,7 @@ and SRAM models exclusively from `src/edge-e3enc`.
 - For console/startup changes, run `./example/hello/run.sh`.
 - For intrinsic or Tensor datapath changes, run `./example/tensor/run.sh`.
 - For one NNC model, run
-  `./example/llama/run.sh --model-file example/llama/model/smoke_<op>.py`.
+  `./example/llama/run.sh --model-file nnc/test/smoke_<op>.py`.
 - For NNC compiler/runtime, Matmul, Attention, DMA layout, or composed-model
   changes, run the complete Llama suite with `./example/llama/test.sh`.
 - For public RTL, SRAM, SoC wrapper, or testbench changes, first run
@@ -43,10 +43,12 @@ make a public case pass.
 `example/llama/test.sh` must:
 
 - build one suite-private simulator below `example/llama/build/harness/verilator`;
-- discover every `example/llama/model/smoke_*.py` without a skip list;
+- discover every `nnc/test/smoke_*.py` without a skip list;
 - run each model in an isolated Python process and compare its BF16 output with
   the PyTorch golden;
-- run `example/llama/model/llama3_source.py` directly with `--profile`;
+- verify `nnc/test/llama3_source.py` matches the user-facing
+  `example/llama/model/llama3_source.py`, then run the test copy with
+  `--profile`;
 - continue after individual failures so the final report is complete;
 - exit nonzero unless every model passes.
 
