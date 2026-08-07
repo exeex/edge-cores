@@ -11,9 +11,16 @@ MEMH="${OUT_DIR}/${NAME}.memh"
 WORDS_FILE="${OUT_DIR}/${NAME}.words"
 REPORT="${OUT_DIR}/run_case.report"
 LOG="${OUT_DIR}/run.log"
+BUILD_LOG="${OUT_DIR}/build.log"
 
-"${REPO_ROOT}/scripts/build-verilator.sh"
-"${SCRIPT_DIR}/build.sh"
+mkdir -p "${OUT_DIR}"
+if ! {
+    "${REPO_ROOT}/scripts/build-verilator.sh"
+    "${SCRIPT_DIR}/build.sh"
+} >"${BUILD_LOG}" 2>&1; then
+    cat "${BUILD_LOG}" >&2
+    exit 1
+fi
 
 words="$(tr -d '[:space:]' < "${WORDS_FILE}")"
 rm -f "${REPORT}" "${LOG}"
@@ -21,6 +28,7 @@ rm -f "${REPORT}" "${LOG}"
 (
     cd "${OUT_DIR}"
     "${SIM_EXE}" \
+        +verilator+quiet \
         "+mem128=${MEMH}" \
         "+mem128_words=${words}" \
         +check_tensor_output \
@@ -28,11 +36,9 @@ rm -f "${REPORT}" "${LOG}"
         +expected_return=0 \
         +max_cycles=500000 \
         +run_case_report=run_case.report
-) 2>&1 | tee "${LOG}"
+) 2>&1 | tee "${LOG}" | sed '/^- .*Verilog \$finish$/d'
 
 if [[ ! -f "${REPORT}" ]] || ! grep -q "TEST PASS" "${REPORT}"; then
     echo "error: tensor example did not pass; see ${LOG}" >&2
     exit 1
 fi
-
-echo "Tensor example passed: ${REPORT}"

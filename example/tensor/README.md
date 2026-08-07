@@ -25,5 +25,8 @@ Build the encrypted-core Verilator simulator and run the example:
 ./example/tensor/run.sh
 ```
 
+The terminal shows runtime `printf` output rather than compiler output. Build
+details are saved to `build/build.log`, and simulator output to `build/run.log`.
+
 Set `LLVM_PREFIX`, `LLD_PREFIX`, `VERILATOR`, `EDGE_TENSOR_OUT`, or
 `EDGE_VERILATOR_OUT` to override local tool and output paths.

@@ -12,3 +12,7 @@ Expected console output:
 Hello from edge-e3!
 EDGE_DEMO TEST PASS
 ```
+
+`run.sh` keeps LLVM and Verilator build output in `build/build.log`, so the
+terminal shows the program's `printf` console directly. Simulation output is
+also saved to `build/run.log`.
