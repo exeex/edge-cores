@@ -1,0 +1,13 @@
+[submodule "third_party/openc906"]
+	path = third_party/openc906
+	url = git@github.com:exeex/openc906.git
+[submodule "third_party/coremark"]
+	path = third_party/coremark
+	url = https://github.com/exeex/coremark.git
+	branch = edge-port
+[submodule "src/edge-e3"]
+	path = src/edge-e3
+	url = https://github.com/exeex/edge-e3.git
+[submodule "src/test-e3"]
+	path = src/test-e3
+	url = git@github.com:exeex/test-e3.git

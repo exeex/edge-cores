@@ -1,0 +1,9 @@
+src/edge-e3/edge_ifu_icache/rtl/edge_ifu_icache_data_array.v
+src/edge-e3/edge_ifu_icache/rtl/edge_ifu_icache_tag_array.v
+src/edge-e3/edge_dcache/rtl/edge_dcache_banked_data_array.v
+src/edge-e3/edge_dcache/rtl/edge_dcache_tag_array.v
+src/edge-e3/edge_dcache/rtl/edge_dcache_dirty_array.v
+src/edge-e3/edge_dtcm_subsys/rtl/fpga_ram.v
+src/edge-e3/edge_dtcm_subsys/rtl/edge_f_spsram_1024x64.v
+src/edge-e3/edge_dtcm_subsys/rtl/edge_spsram_1024x64.v
+src/edge-e3/edge_dtcm_subsys/rtl/edge_dtcm_spsram_1024x64.v

@@ -1,0 +1,13 @@
+.vscode
+.venv-aten/
+*.vcd
+*.pyc
+build*/
+out*/
+src/edge-e3enc/edge_e3enc.v
+openc906.local.cmake
+smart_run/setup/toolchain.local.cmake
+smart_run/setup/toolchain.env
+smart_run/tests/baremetal/build/
+smart_run/work/
+.codex/skills/staredge-synth-report/references/synth-reports/
