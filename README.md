@@ -18,17 +18,32 @@ llama.cpp-compatible Q8 quantization is the primary planned deployment format.
 ## Product Line
 
 The suffix describes the tensor dimension: `edge-eN` uses a `2^N x 2^N` tensor
-unit. This repository implements the open-source `edge-e3`.
+unit, while the higher-throughput `P` variant doubles its width. This repository
+implements the open-source `edge-e3`.
 
 | Specification @ 1 GHz | `edge-e3` | `edge-e4` | `edge-e5` |
 | --- | ---: | ---: | ---: |
-| Open source | Yes | No | No |
+| Product positioning | License-free, Transformer/CNN classifiers (YOLO) | Higher-compute workloads such as segmentation | LLM inference, Q8/fp8 quantization |
+| Encrypted Open source | Yes | Jul 2027 | No |
+| Fully Open source | Jul 2027 | No | No |
 | Tensor unit | 8x8 | 16x16 | 32x32 |
-| SRAM size (dtcm)| 128KB| 256KB | 512KB
+| SRAM size (dtcm) | 128KB | 256KB | 512KB |
 | BF16 peak throughput (TFLOPS) | 0.128 | 0.512 | 2.048 |
 | Activation units | 1 | 2 | 4 |
 | SiLU throughput (G elements/s) | 1 | 2 | 4 |
 | Softmax throughput (G elements/s) | 0.333 | 0.667 | 1.333 |
+
+### P Series
+
+| Specification @ 1 GHz | `edge-e3p` | `edge-e4p` | `edge-e5p` |
+| --- | ---: | ---: | ---: |
+| Product positioning | Higher-throughput Transformer/CNN classifiers | Higher-throughput segmentation workloads | Higher-throughput LLM inference, Q4/fp4 qunatization |
+| Open source | No | No | No |
+| Tensor unit | 8x16 | 16x32 | 32x64 |
+| SRAM size (dtcm) | 128KB | 256KB | 1MB |
+| BF16 peak throughput (TFLOPS) | 0.256 | 1.024 | 4.096 |
+
+
 
 ## Edge E3 Performance
 
@@ -61,16 +76,26 @@ Tensor utilization is `ideal MAC cycles / measured X30 loop cycles`.
 
 ### Activation performance
 
-| BF16 operation | Elements | Streaming passes | Ideal cycles | Measured cycles | Pipeline utilization | Effective throughput (element/cycle) |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Sigmoid | 4,096 | 1 | 4,096 | 4,117 | 99.49% | 0.995 |
-| SiLU | 4,096 | 1 | 4,096 | 4,117 | 99.49% | 0.995 |
-| Tanh | 4,096 | 1 | 4,096 | 4,117 | 99.49% | 0.995 |
-| Softmax | 4,096 | 3 | 12,288 | 12,338 | 99.59% | 0.332 |
+Effective throughput assumes a 1 GHz clock and is calculated as
+`elements * 1,000,000,000 / measured cycles`. RMSNorm is the average of the two
+32x64 RMSNorm calls in the tiny Llama transformer-block profile. Its ideal
+cycle count uses useful pipeline work: eight elements per cycle for the Tensor
+square, reduction, normalization, and weight streams, plus one RSQRT element
+per row at one element per ACTU cycle.
+
+| BF16 operation | Elements | Ideal cycles | Measured cycles | Pipeline utilization | Effective throughput @ 1 GHz (element/s) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Sigmoid | 4,096 | 4,096 | 4,117 | 99.49% | 0.994G |
+| SiLU | 4,096 | 4,096 | 4,117 | 99.49% | 0.994G |
+| Tanh | 4,096 | 4,096 | 4,117 | 99.49% | 0.994G |
+| Softmax | 4,096 | 12,288 | 12,338 | 99.59% | 0.331G |
+| RMSNorm (32x64) | 2,048 | 1,056 | 9,985 | 10.58% | 0.205G |
 
 
 - [ACTU activation throughput](experiments/actu-silu-throughput/README.md):
   start-to-sync cycle benchmark for 4,096 BF16 elements.
+- [Tiny Llama operator profile](example/llama/README.md): per-node cycle
+  measurements including RMSNorm.
 
 
 ## Development
