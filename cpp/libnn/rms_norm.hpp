@@ -22,8 +22,9 @@ constexpr size_t kRmsNormVectorElements = 8u;
 constexpr size_t kRmsNormTileElements = 8u * 8u;
 
 template <typename DType>
-__attribute__((always_inline)) inline void rms_norm_square_row(
-    DType *square, DType *input, DType *square_mean_weight, size_t blocks)
+__attribute__((always_inline)) inline void rms_norm_square_batch(
+    DType *square, DType *input, DType *square_mean_weight,
+    size_t vector_count)
 {
     // The diagonal WLD holds exact 1/cols powers of two. dot(W, x) therefore
     // produces x/cols while the scale stream supplies x, yielding x*x/cols
@@ -32,7 +33,7 @@ __attribute__((always_inline)) inline void rms_norm_square_row(
     edge_tensor_sld_stream(input);
     edge_tensor_setin(input);
     edge_tensor_setout(square);
-    edge_tensor_setn(blocks);
+    edge_tensor_setn(vector_count);
     edge_tensor_start<EDGE_TENSOR_START_OPT_USE_SCALE |
                       EDGE_TENSOR_START_OPT_SCALE_STREAM |
                       EDGE_TENSOR_START_OPT_NO_PSUM>();
@@ -40,22 +41,29 @@ __attribute__((always_inline)) inline void rms_norm_square_row(
 }
 
 template <typename DType>
-__attribute__((always_inline)) inline void rms_norm_reduce_mean_square(
-    DType *mean_square, DType *square, DType *reduce_weight, size_t blocks)
+__attribute__((always_inline)) inline void rms_norm_reduce_mean_square_batch(
+    DType *mean_square, DType *square, DType *reduce_weight, size_t rows,
+    size_t cols, size_t blocks)
 {
     // Eight all-one rows produce eight identical partial sums. RSUM keeps
     // each lane in BF22 across every block and emits one BF16x8 vector.
-    edge_tensor_wld(reduce_weight);
-    edge_tensor_setin(square);
-    edge_tensor_setout(mean_square);
-    edge_tensor_setn(blocks);
-    edge_tensor_start<EDGE_TENSOR_START_OPT_RSUM>();
+    for (size_t row = 0; row < rows; ++row) {
+        if (row == 0u)
+            edge_tensor_wld(reduce_weight);
+        else
+            edge_tensor_wld<EDGE_TENSOR_LOAD_OPT_REUSE>();
+        edge_tensor_setin(&square[row * cols]);
+        edge_tensor_setout(
+            &mean_square[row * kRmsNormVectorElements]);
+        edge_tensor_setn(blocks);
+        edge_tensor_start<EDGE_TENSOR_START_OPT_RSUM>();
+    }
     edge_tensor_sync();
 }
 
 template <typename DType>
-__attribute__((always_inline)) inline void rms_norm_inverse_rms(
-    DType *inverse_rms, DType *mean_square, float epsilon)
+__attribute__((always_inline)) inline void rms_norm_inverse_rms_batch(
+    DType *inverse_rms, DType *mean_square, size_t rows, float epsilon)
 {
     union {
         float f32;
@@ -65,61 +73,74 @@ __attribute__((always_inline)) inline void rms_norm_inverse_rms(
     edge_actu_setscalar(static_cast<uintptr_t>(epsilon_bits.u32));
     edge_actu_setin(mean_square);
     edge_actu_setout(inverse_rms);
-    edge_actu_setn(kRmsNormVectorElements);
+    edge_actu_setn(rows * kRmsNormVectorElements);
     edge_actu_start();
     edge_actu_sync();
 }
 
 template <typename DType>
-__attribute__((always_inline)) inline void rms_norm_apply_scale(
-    DType *output, DType *input, DType *inverse_rms,
-    Tensor<DType> packed_weight, DType *weight_stage,
-    bool weight_dram, bool stage_all_weights, size_t blocks,
-    size_t weight_capacity_tiles)
+__attribute__((always_inline)) inline void rms_norm_normalize_batch(
+    DType *output, DType *input, DType *inverse_rms, DType *eye_stage,
+    size_t rows, size_t cols, size_t blocks)
 {
-    const size_t tile_bytes = kRmsNormTileElements * sizeof(DType);
-
-    // One inverse-RMS vector is shared by every block. Independent diagonal
-    // weight starts are queued continuously and drained only after the row.
-    edge_tensor_sld(inverse_rms);
-    edge_tensor_sync();
-
-    const bool stream_weights = weight_dram && !stage_all_weights;
-    if (stream_weights) {
-        const size_t ring_tiles =
-            blocks < weight_capacity_tiles ? blocks : weight_capacity_tiles;
-        edge_dma_start_strided_circular(
-            packed_weight.data, weight_stage, tile_bytes, tile_bytes, blocks,
-            0u, 1u, ring_tiles);
-        edge_tensor_wld_circular();
-    }
-
-    for (size_t block = 0; block < blocks; ++block) {
-        if (!stream_weights) {
-            DType *weight_ptr =
-                stage_all_weights
-                    ? &weight_stage[block * kRmsNormTileElements]
-                    : &packed_weight.data[block * kRmsNormTileElements];
-            edge_tensor_wld(weight_ptr);
-        }
-        if (block != 0u)
-            edge_tensor_sld<EDGE_TENSOR_LOAD_OPT_REUSE>();
-        edge_tensor_setin(&input[block * kRmsNormVectorElements]);
-        edge_tensor_setout(&output[block * kRmsNormVectorElements]);
+    edge_tensor_wld(eye_stage);
+    for (size_t row = 0; row < rows; ++row) {
+        if (row != 0u)
+            edge_tensor_wld<EDGE_TENSOR_LOAD_OPT_REUSE>();
+        edge_tensor_sld(&inverse_rms[row * kRmsNormVectorElements]);
+        edge_tensor_setin(&input[row * cols]);
+        edge_tensor_setout(&output[row * cols]);
+        edge_tensor_setn(blocks);
         edge_tensor_start<EDGE_TENSOR_START_OPT_USE_SCALE |
                           EDGE_TENSOR_START_OPT_NO_PSUM>();
-        if (stream_weights && block + 1u < blocks)
-            edge_tensor_wld_circular();
     }
     edge_tensor_sync();
-    if (stream_weights)
+}
+
+template <typename DType>
+__attribute__((always_inline)) inline void rms_norm_apply_weight_batch(
+    DType *output, DType *input, Tensor<DType> weight, DType *eye_stage,
+    DType *weight_ring, size_t rows, size_t cols, size_t blocks)
+{
+    edge_tensor_wld(eye_stage);
+    if (!is_dtcm_addr(weight.data)) {
+        constexpr size_t kWeightRingVectors = 8u;
+        edge_dcache_clean_range(weight.data, cols * sizeof(DType));
+        edge_dma_start_strided_circular(
+            weight.data, weight_ring, kRmsNormVectorElements * sizeof(DType),
+            kRmsNormVectorElements * sizeof(DType), blocks,
+            0u, rows, kWeightRingVectors);
+        edge_tensor_sld_circular();
+        edge_tensor_setin(input);
+        edge_tensor_setout(output);
+        edge_tensor_setn(rows * blocks);
+        edge_tensor_start<EDGE_TENSOR_START_OPT_USE_SCALE |
+                          EDGE_TENSOR_START_OPT_SCALE_STREAM |
+                          EDGE_TENSOR_START_OPT_NO_PSUM>();
+        edge_tensor_sync();
         edge_dma_sync();
+        return;
+    }
+
+    for (size_t row = 0; row < rows; ++row) {
+        if (row != 0u)
+            edge_tensor_wld<EDGE_TENSOR_LOAD_OPT_REUSE>();
+        edge_tensor_sld_stream(weight.data);
+        edge_tensor_setin(&input[row * cols]);
+        edge_tensor_setout(&output[row * cols]);
+        edge_tensor_setn(blocks);
+        edge_tensor_start<EDGE_TENSOR_START_OPT_USE_SCALE |
+                          EDGE_TENSOR_START_OPT_SCALE_STREAM |
+                          EDGE_TENSOR_START_OPT_NO_PSUM>();
+    }
+    edge_tensor_sync();
 }
 
 template <bool InputDram, bool OutputDram, typename DType>
 __attribute__((always_inline)) inline void rms_norm_impl(
-    Tensor<DType> y, Tensor<DType> x, Tensor<DType> packed_weight,
-    Tensor<DType> reduce_weight, Tensor<DType> square_weight, float epsilon)
+    Tensor<DType> y, Tensor<DType> x, Tensor<DType> weight,
+    Tensor<DType> eye, Tensor<DType> reduce_weight,
+    Tensor<DType> square_weight, float epsilon)
 {
     constexpr size_t kBatchElements = 512u;
     const size_t cols = x.shape.dims[x.shape.rank - 1u];
@@ -138,41 +159,28 @@ __attribute__((always_inline)) inline void rms_norm_impl(
     DType *output_stage = input_stage + input_stage_elements;
     const size_t output_stage_elements = OutputDram ? batch_capacity : 0u;
     DType *square_stage = output_stage + output_stage_elements;
-    DType *square_weight_stage = square_stage + cols;
+    DType *square_weight_stage = square_stage + batch_capacity;
     DType *reduce_stage = square_weight_stage + kRmsNormTileElements;
-    DType *mean_square_stage = reduce_stage + kRmsNormTileElements;
-    DType *inv_stage = mean_square_stage + kRmsNormVectorElements;
-    DType *weight_stage = inv_stage + kRmsNormVectorElements;
+    DType *eye_stage = reduce_stage + kRmsNormTileElements;
+    DType *mean_square_stage = eye_stage + kRmsNormTileElements;
+    DType *inv_stage =
+        mean_square_stage + batch_rows * kRmsNormVectorElements;
+    DType *weight_ring =
+        inv_stage + batch_rows * kRmsNormVectorElements;
 
-    const size_t fixed_elements = static_cast<size_t>(weight_stage - scratch);
+    const size_t fixed_elements = static_cast<size_t>(weight_ring - scratch);
     const size_t scratch_elements = kDtcmOpScratchBytes / sizeof(DType);
-    if (fixed_elements > scratch_elements) {
+    if (fixed_elements + kRmsNormTileElements > scratch_elements) {
         alloc_failed() = true;
         return;
     }
-
-    const bool weight_dram = !is_dtcm_addr(packed_weight.data);
-    const size_t weight_capacity_tiles =
-        (scratch_elements - fixed_elements) / kRmsNormTileElements;
-    if (weight_dram && weight_capacity_tiles == 0u) {
-        alloc_failed() = true;
-        return;
-    }
-    const bool stage_all_weights =
-        weight_dram && weight_capacity_tiles >= blocks;
 
     edge_dma_start(square_weight.data, square_weight_stage, tile_bytes);
     edge_dma_sync();
     edge_dma_start(reduce_weight.data, reduce_stage, tile_bytes);
     edge_dma_sync();
-
-    if (weight_dram) {
-        if (stage_all_weights) {
-            edge_dma_start(packed_weight.data, weight_stage,
-                           blocks * tile_bytes);
-            edge_dma_sync();
-        }
-    }
+    edge_dma_start(eye.data, eye_stage, tile_bytes);
+    edge_dma_sync();
 
     edge_tensor_setcsr<1, EDGE_TENSOR_WTYPE_BF16>();
 
@@ -194,20 +202,19 @@ __attribute__((always_inline)) inline void rms_norm_impl(
         if constexpr (OutputDram)
             batch_output = output_stage;
 
-        for (size_t row = 0; row < batch_count; ++row) {
-            DType *row_input = &batch_input[row * cols];
-            DType *row_output = &batch_output[row * cols];
-
-            rms_norm_square_row(square_stage, row_input, square_weight_stage,
-                                blocks);
-            rms_norm_reduce_mean_square(
-                mean_square_stage, square_stage, reduce_stage, blocks);
-            rms_norm_inverse_rms(inv_stage, mean_square_stage, epsilon);
-            rms_norm_apply_scale(
-                row_output, row_input, inv_stage, packed_weight, weight_stage,
-                weight_dram, stage_all_weights, blocks,
-                weight_capacity_tiles);
-        }
+        rms_norm_square_batch(square_stage, batch_input, square_weight_stage,
+                              batch_elements / kRmsNormVectorElements);
+        rms_norm_reduce_mean_square_batch(
+            mean_square_stage, square_stage, reduce_stage, batch_count, cols,
+            blocks);
+        rms_norm_inverse_rms_batch(
+            inv_stage, mean_square_stage, batch_count, epsilon);
+        rms_norm_normalize_batch(
+            square_stage, batch_input, inv_stage, eye_stage, batch_count,
+            cols, blocks);
+        rms_norm_apply_weight_batch(
+            batch_output, square_stage, weight, eye_stage, weight_ring,
+            batch_count, cols, blocks);
 
         if constexpr (OutputDram) {
             DType *output_dst = &y.data[batch_base * cols];
@@ -220,7 +227,7 @@ __attribute__((always_inline)) inline void rms_norm_impl(
 
 template <typename DType, typename Eps>
 inline void rms_norm(Tensor<DType> y, Tensor<DType> x,
-                     Tensor<DType> packed_weight,
+                     Tensor<DType> weight, Tensor<DType> eye,
                      Tensor<DType> reduce_weight,
                      Tensor<DType> square_weight,
                      Eps eps)
@@ -230,23 +237,24 @@ inline void rms_norm(Tensor<DType> y, Tensor<DType> x,
     const float epsilon = static_cast<float>(eps);
 
     if (rows == 0u || cols == 0u || (cols % 8u) != 0u ||
-        x.data == nullptr || y.data == nullptr || packed_weight.data == nullptr ||
+        x.data == nullptr || y.data == nullptr || weight.data == nullptr ||
+        eye.data == nullptr ||
         reduce_weight.data == nullptr || square_weight.data == nullptr) {
         return;
     }
     const bool input_dram = !is_dtcm_addr(x.data);
     const bool output_dram = !is_dtcm_addr(y.data);
     if (input_dram && output_dram) {
-        rms_norm_impl<true, true>(y, x, packed_weight, reduce_weight,
+        rms_norm_impl<true, true>(y, x, weight, eye, reduce_weight,
                                   square_weight, epsilon);
     } else if (input_dram) {
-        rms_norm_impl<true, false>(y, x, packed_weight, reduce_weight,
+        rms_norm_impl<true, false>(y, x, weight, eye, reduce_weight,
                                    square_weight, epsilon);
     } else if (output_dram) {
-        rms_norm_impl<false, true>(y, x, packed_weight, reduce_weight,
+        rms_norm_impl<false, true>(y, x, weight, eye, reduce_weight,
                                    square_weight, epsilon);
     } else {
-        rms_norm_impl<false, false>(y, x, packed_weight, reduce_weight,
+        rms_norm_impl<false, false>(y, x, weight, eye, reduce_weight,
                                     square_weight, epsilon);
     }
 }

@@ -654,7 +654,8 @@ class RmsNormLowerer(OpLowerer):
         cols = src.shape[-1]
         if weight.shape != (cols,):
             raise SystemExit(f"RMSNorm weight shape {weight.shape} does not match width {cols}")
-        packed_weight = weights.use_rms_diag(f"{weight.name}_rms_diag", weight)
+        weights.use(weight)
+        eye = weights.use_eye8("tensor_eye8")
         square_weight = weights.use_rms_square_mean(
             f"rms_square_mean_{cols}", cols
         )
@@ -664,7 +665,8 @@ class RmsNormLowerer(OpLowerer):
             "rms_norm",
             (node.args[0],),
             {
-                "packed_weight": packed_weight.name,
+                "weight": weight.name,
+                "eye": eye.name,
                 "reduce_weight": reduce_weight.name,
                 "square_weight": square_weight.name,
                 **node.attrs,
@@ -998,7 +1000,8 @@ class ForwardRenderer:
             case "rms_norm":
                 return (
                     f"nnedge::op::rms_norm({outs}, {args}, "
-                    f"ctx->{node.attrs['packed_weight']}, "
+                    f"ctx->{node.attrs['weight']}, "
+                    f"ctx->{node.attrs['eye']}, "
                     f"ctx->{node.attrs['reduce_weight']}, "
                     f"ctx->{node.attrs['square_weight']}, "
                     f"{node.attrs['eps']})"

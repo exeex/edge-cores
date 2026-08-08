@@ -29,8 +29,9 @@ class RmsNormWeightTest(unittest.TestCase):
 
         self.assertEqual(lowered.attrs["square_weight"], "rms_square_mean_64")
         self.assertEqual(lowered.attrs["reduce_weight"], "rms_reduce_sum8")
+        self.assertEqual(lowered.attrs["weight"], "weight")
+        self.assertEqual(lowered.attrs["eye"], "tensor_eye8")
         self.assertNotIn("setup", lowered.attrs)
-        self.assertNotIn("tensor_eye8", weights.records)
         self.assertNotIn("out_rms_setup16", weights.records)
 
         square = weights.records["rms_square_mean_64"]
