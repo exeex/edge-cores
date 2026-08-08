@@ -1,33 +1,33 @@
-# edge-e3
+# edge-cores
 
-edge-e3 is a dual-issue RISC-V 64-bit NPU designed for local LLM inference. It
-integrates:
+edge-cores is a family of dual-issue 64-bit RISC-V NPUs designed for neural
+network acceleration. Depending on the model, each NPU integrates:
 
-- 16 KB instruction cache
-- 16 KB data cache
-- 128 KB DTCM
-- 8x8 BF16 tensor unit
-- Tensor, ACTU, CMPU, and DMA acceleration; vector-like operations are mapped
-  onto these units without a separate vector unit
+- 16–32 KB instruction cache
+- 16–32 KB data cache
+- 128–1,024 KB DTCM
+- An 8x8 to 32x64 BF16 tensor unit
 
-Development is guided by ChatGPT and uses standard open-source toolchains. The
-design does not depend on a custom compiler or simulator fork. Its PyTorch-to-NNC
-flow can compile models such as Llama, Qwen, and GPT-OSS into executable images.
+The SDK is developed with guidance from ChatGPT and uses standard open-source
+toolchains. The design does not depend on a custom compiler or simulator fork.
+Its PyTorch-to-NNC flow can compile models such as Llama, Qwen, and GPT-OSS into
+executable images.
 llama.cpp-compatible Q8 quantization is the primary planned deployment format.
+
+The SDK currently supports Llama 3. Support for additional models, including
+Qwen and YOLO, is under development.
 
 ## Product Line
 
-The suffix describes the tensor dimension: `edge-eN` uses a `2^N x 2^N` tensor
-unit, while the higher-throughput `P` variant doubles its width. This repository
-implements the open-source `edge-e3`.
+### E Series
 
 | Specification @ 1 GHz | `edge-e3` | `edge-e4` | `edge-e5` |
 | --- | ---: | ---: | ---: |
-| Product positioning | License-free, Transformer/CNN classifiers (YOLO) | Higher-compute workloads such as segmentation | LLM inference, Q8/fp8 quantization |
-| Encrypted Open source | Yes | Jul 2027 | No |
-| Fully Open source | Jul 2027 | No | No |
+| Product positioning | License-free Transformer/CNN classifiers (including YOLO) | Compute-intensive workloads such as segmentation | LLM inference with Q8/FP8 quantization |
+| Encrypted RTL available | Yes | July 2027 | No |
+| Fully open source | July 2027 | No | No |
 | Tensor unit | 8x8 | 16x16 | 32x32 |
-| SRAM size (dtcm) | 128KB | 256KB | 512KB |
+| SRAM size (DTCM) | 128 KB | 256 KB | 512 KB |
 | BF16 peak throughput (TFLOPS) | 0.128 | 0.512 | 2.048 |
 | Activation units | 1 | 2 | 4 |
 | SiLU throughput (G elements/s) | 1 | 2 | 4 |
@@ -35,14 +35,13 @@ implements the open-source `edge-e3`.
 
 ### P Series
 
-| Specification @ 1 GHz | `edge-e3p` | `edge-e4p` | `edge-e5p` |
+| Specification @ 1 GHz | `edge-p3` | `edge-p4` | `edge-p5` |
 | --- | ---: | ---: | ---: |
-| Product positioning | Higher-throughput Transformer/CNN classifiers | Higher-throughput segmentation workloads | Higher-throughput LLM inference, Q4/fp4 qunatization |
+| Product positioning | Higher-throughput Transformer/CNN classifiers | Higher-throughput segmentation workloads | Higher-throughput LLM inference with Q4/FP4 quantization |
 | Open source | No | No | No |
 | Tensor unit | 8x16 | 16x32 | 32x64 |
-| SRAM size (dtcm) | 128KB | 256KB | 1MB |
+| SRAM size (DTCM) | 128 KB | 256 KB | 1 MB |
 | BF16 peak throughput (TFLOPS) | 0.256 | 1.024 | 4.096 |
-
 
 
 ## Edge E3 Performance
