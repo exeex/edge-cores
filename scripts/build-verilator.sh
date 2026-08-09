@@ -7,6 +7,7 @@ OUT_DIR="${EDGE_VERILATOR_OUT:-${REPO_ROOT}/build/verilator}"
 OBJ_DIR="${OUT_DIR}/obj"
 VERILATOR_BIN="${VERILATOR:-verilator}"
 CORE_RTL="${REPO_ROOT}/src/edge-e3enc/edge_e3enc.v"
+RV_FILELIST="${REPO_ROOT}/src/edge-e3enc/edge_rv_public.fl"
 SRAM_FILELIST="${REPO_ROOT}/src/edge-e3enc/edge_e3enc_sram.fl"
 SIM_EXE="${OBJ_DIR}/Vedge_soc_demo_tb"
 
@@ -17,6 +18,7 @@ fi
 
 required=(
     "${CORE_RTL}"
+    "${RV_FILELIST}"
     "${SRAM_FILELIST}"
     "${REPO_ROOT}/src/soc/logical/tb/edge_soc_demo_tb.v"
     "${REPO_ROOT}/src/soc/logical/common/edge_soc_top.v"
@@ -40,6 +42,15 @@ while IFS= read -r relative_path; do
     fi
 done < "${SRAM_FILELIST}"
 
+while IFS= read -r relative_path; do
+    [[ -z "${relative_path}" || "${relative_path}" == \#* ]] && continue
+    if [[ ! -f "${REPO_ROOT}/${relative_path}" ]]; then
+        echo "error: public edge-rv RTL is missing: ${REPO_ROOT}/${relative_path}" >&2
+        echo "hint: initialize the src/edge-rv public submodule" >&2
+        exit 1
+    fi
+done < "${RV_FILELIST}"
+
 mkdir -p "${OUT_DIR}"
 rm -rf "${OBJ_DIR}"
 
@@ -62,6 +73,7 @@ cd "${REPO_ROOT}"
     "${REPO_ROOT}/src/soc/logical/axi/edge_axi_interconnect.v" \
     "${REPO_ROOT}/src/soc/logical/mem/edge_axi_ram.v" \
     "${REPO_ROOT}/src/soc/logical/axi/edge_axi_err.v" \
+    -f "${RV_FILELIST}" \
     "${CORE_RTL}" \
     -f "${SRAM_FILELIST}"
 

@@ -15,7 +15,7 @@ BUILD_LOG="${OUT_DIR}/build.log"
 
 mkdir -p "${OUT_DIR}"
 if ! {
-    "${REPO_ROOT}/scripts/build-verilator.sh"
+    "${REPO_ROOT}/scripts/build-verilator.sh" &&
     "${SCRIPT_DIR}/build.sh"
 } >"${BUILD_LOG}" 2>&1; then
     cat "${BUILD_LOG}" >&2

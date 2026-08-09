@@ -1,0 +1,4 @@
+interface:
+  display_name: "RTL Release Packager"
+  short_description: "Package private RTL for public simulation"
+  default_prompt: "Use $rtl-release-packager to generate and validate an obfuscated RTL release package."
