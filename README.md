@@ -165,6 +165,11 @@ Use $edge-contribution to prepare this change for an edge-cores pull request.
 
 ## Licensing
 
+The reusable [`edge-rv`](src/edge-rv) framework is open-source hardware under
+the permissive CERN Open Hardware Licence Version 2
+(`CERN-OHL-P-2.0`). Product-specific repositories and generated RTL may use
+different licenses.
+
 edge-e3 is distributed under the custom edge-e3 Hardware License 1.0.
 Simulation, modification, distribution, and FPGA implementation are permitted.
 A manufactured physical package may contain no more than one edge-e3 core, and
