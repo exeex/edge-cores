@@ -44,6 +44,10 @@ has authorized that external action.
 
 ## Make a reviewable change
 
+- Read `CONTRIBUTING.md` and `LICENSING.md` before editing. Contributions to
+  files maintained directly by edge-cores use `Apache-2.0`; contributions to a
+  submodule use that submodule's license, including `CERN-OHL-P-2.0` for
+  `src/edge-rv`.
 - State the problem and why it belongs in the shared Edge RV framework.
 - Prefer one architectural idea or bug fix per PR.
 - Add or update a focused test that fails without the change when practical.

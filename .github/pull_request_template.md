@@ -34,3 +34,4 @@
 - [ ] I checked `git diff --check` and reviewed the complete diff.
 - [ ] I did not commit generated build output, private RTL, credentials, or symbol mappings.
 - [ ] I documented compatibility changes and benchmark assumptions, or marked them not applicable.
+- [ ] I have the right to submit this contribution under the license applicable to the changed files.

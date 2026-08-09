@@ -204,6 +204,11 @@ Use $edge-contribution to prepare this change for an edge-cores pull request.
 
 ## Licensing
 
+The C++ libraries, Python compiler and runtime tools, scripts, examples, SoC
+harness RTL, documentation, and automation maintained directly in edge-cores
+are licensed under the Apache License, Version 2.0 (`Apache-2.0`). See
+[`LICENSE`](LICENSE).
+
 The reusable [`edge-rv`](src/edge-rv) framework is open-source hardware under
 the permissive CERN Open Hardware Licence Version 2
 (`CERN-OHL-P-2.0`). Product-specific repositories and generated RTL may use
@@ -218,3 +223,6 @@ edge-e3 cores requires a separate written commercial license.
 See [`src/edge-e3enc/LICENSE.md`](src/edge-e3enc/LICENSE.md) for the complete terms.
 This is a source-available hardware license, not an OSI-approved open-source
 license.
+
+See [`LICENSING.md`](LICENSING.md) for the complete repository and submodule
+license boundary.
