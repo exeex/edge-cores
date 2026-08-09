@@ -11,3 +11,12 @@
 [submodule "src/test-e3"]
 	path = src/test-e3
 	url = git@github.com:exeex/test-e3.git
+[submodule "src/edge-rv"]
+	path = src/edge-rv
+	url = https://github.com/exeex/edge-rv.git
+[submodule "src/test-rv"]
+	path = src/test-rv
+	url = git@github.com:exeex/test-rv.git
+[submodule "src/edge-e3enc"]
+	path = src/edge-e3enc
+	url = git@github.com:exeex/edge-e3enc.git
