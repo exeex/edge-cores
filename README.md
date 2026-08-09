@@ -124,6 +124,45 @@ Add llama.cpp Q4_K_M support to the tensor unit and NNC runtime.
 I want to add <feature>. Where should I start, and which tests should I run?
 ```
 
+## For Research Teams
+
+Use Edge RV as the scalar and accelerator framework for integrating a custom
+ASIC, DMA, and DTCM/SRAM. The
+[`edge-custom-asic`](.codex/skills/edge-custom-asic/SKILL.md) skill explains the
+instruction interface, snapshot mechanism, LSU integration, verification, and
+paper-artifact workflow.
+
+When publishing results, distinguish the edge-cores contribution—its snapshot
+mechanism and tightly integrated dual-issue, in-order issue/out-of-order
+execution model—from your contribution, such as the custom ASIC architecture,
+dataflow, PPA, or application-level performance. Use
+[`references.bib`](references.bib) for the canonical edge-cores citation.
+
+Example prompt:
+
+```text
+Use $edge-custom-asic to connect my accelerator and plan its paper artifact.
+```
+
+## For Open-Source Contributors
+
+Help evolve the shared Edge RV framework through focused, tested pull requests.
+File every issue in the
+[edge-cores issue tracker](https://github.com/exeex/edge-cores/issues), including
+issues involving submodules; do not file them in a submodule's own tracker.
+
+The [`edge-contribution`](.codex/skills/edge-contribution/SKILL.md) skill covers
+forking the repository, choosing regression tests, preparing a pull request,
+and supplying evidence for human and agent-assisted review. The repository also
+provides an [issue template](.github/ISSUE_TEMPLATE/edge_issue.md) and a
+[pull request template](.github/pull_request_template.md).
+
+Example prompt:
+
+```text
+Use $edge-contribution to prepare this change for an edge-cores pull request.
+```
+
 ## Licensing
 
 edge-e3 is distributed under the custom edge-e3 Hardware License 1.0.

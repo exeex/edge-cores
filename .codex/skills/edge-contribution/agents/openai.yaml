@@ -1,0 +1,4 @@
+interface:
+  display_name: "Contribute to Edge RV"
+  short_description: "Prepare tested pull requests for the shared Edge RV framework"
+  default_prompt: "Use $edge-contribution to prepare and validate my Edge RV contribution for a pull request."
