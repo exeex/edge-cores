@@ -534,7 +534,8 @@ class InitRenderer:
         if value.kind == "size_t":
             return [f"inline nnedge::size_t {value.name};"]
         return [
-            f"inline dtype {value.name}_storage[{self.numel(value.shape)}];",
+            f"alignas(nnedge::kArenaAlign) inline dtype {value.name}_storage["
+            f"{self.numel(value.shape)}];",
             f"inline Tensor<dtype> {value.name};",
         ]
 

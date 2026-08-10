@@ -225,5 +225,26 @@ class DramPreferenceTest(unittest.TestCase):
         self.assertIn("nnedge::op::matmul(out, lhs_dtcm, rhs, 1u)", rendered)
 
 
+class InitRendererTest(unittest.TestCase):
+    def test_tensor_storage_is_dma_beat_aligned(self) -> None:
+        abi = compiler.ForwardABI(
+            (compiler.AbiValue("x", "tensor", (3,)),),
+            (compiler.AbiValue("y", "tensor", (3,)),),
+        )
+
+        rendered = compiler.InitRenderer(
+            abi, compiler.WeightStore({})
+        ).render()
+
+        self.assertIn(
+            "alignas(nnedge::kArenaAlign) inline dtype x_storage[3];",
+            rendered,
+        )
+        self.assertIn(
+            "alignas(nnedge::kArenaAlign) inline dtype y_storage[3];",
+            rendered,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
