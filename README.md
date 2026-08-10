@@ -103,9 +103,16 @@ The smallest NNC end-to-end example exports a PyTorch linear model, runs it on
 the encrypted-core Verilator model, and compares its BF16 output with PyTorch:
 
 ```sh
-python3 -m pip install -r nnc/requirements.txt
-./example/llama/run.sh
+git submodule update --init src/edge-e3enc src/edge-rv
+./scripts/setup-python.sh
+PYTHON=.venv/bin/python ./example/llama/run.sh
 ```
+
+The setup script uses the locked uv project environment in `.venv`. It selects
+a CPU PyTorch build when no usable NVIDIA GPU is reported, otherwise choosing a
+compatible CUDA wheel from the driver capability reported by `nvidia-smi`.
+Override detection with `./scripts/setup-python.sh cpu`, `cu126`, `cu130`, or
+`cu132`. Do not add uv's managed Python directory to the global `PATH`.
 
 Install the [ChatGPT desktop app](https://learn.chatgpt.com/docs/app) and select
 Codex for software development, or use the

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import glob
 import importlib.util
 import math
 import os
@@ -44,6 +45,12 @@ def tool(env_name: str, fallback: str) -> str:
     homebrew = Path("/opt/homebrew/opt/llvm/bin") / fallback
     if homebrew.exists():
         return str(homebrew)
+    versioned = glob.glob(f"/usr/bin/{fallback}-[0-9]*")
+    if versioned:
+        def version(path: str) -> tuple[int, ...]:
+            suffix = Path(path).name.removeprefix(f"{fallback}-")
+            return tuple(int(part) for part in suffix.split(".") if part.isdigit())
+        return max(versioned, key=version)
     raise SystemExit(f"missing tool: {fallback} (override with {env_name})")
 
 
@@ -205,7 +212,7 @@ def run(args: argparse.Namespace, build_dir: Path, expected: tuple[int, ...]) ->
     words = (build_dir / "llama.words").read_text().strip()
     dump = build_dir / "actual.hex"
     command = [
-        str(sim), "+verilator+quiet", f"+mem128={build_dir / 'llama.memh'}",
+        str(sim), f"+mem128={build_dir / 'llama.memh'}",
         f"+mem128_words={words}", f"+max_cycles={args.max_cycles}",
         f"+dump_base={args.output_base}", f"+dump_len={len(expected) * 2}",
         f"+dump_file={dump}", f"+run_case_report={build_dir / 'run_case.report'}",

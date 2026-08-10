@@ -23,7 +23,6 @@ words="$(tr -d '[:space:]' < "${OUT_DIR}/hello.words")"
 (
     cd "${OUT_DIR}"
     "${SIM_EXE}" \
-        +verilator+quiet \
         "+mem128=${OUT_DIR}/hello.memh" \
         "+mem128_words=${words}" \
         +max_cycles=10000 \

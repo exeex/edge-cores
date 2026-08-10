@@ -28,7 +28,6 @@ rm -f "${REPORT}" "${LOG}"
 (
     cd "${OUT_DIR}"
     "${SIM_EXE}" \
-        +verilator+quiet \
         "+mem128=${MEMH}" \
         "+mem128_words=${words}" \
         +check_tensor_output \

@@ -1,0 +1,61 @@
+[project]
+name = "edge-cores"
+version = "0.0.0"
+description = "Python environment for the Edge RV NNC and software harness"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "transformers>=4.57.1",
+]
+
+[project.optional-dependencies]
+cpu = [
+    "torch>=2.12,<2.14",
+]
+cu126 = [
+    "torch>=2.12,<2.14",
+]
+cu130 = [
+    "torch>=2.12,<2.14",
+]
+cu132 = [
+    "torch>=2.12,<2.14",
+]
+
+[tool.uv]
+package = false
+conflicts = [
+    [
+        { extra = "cpu" },
+        { extra = "cu126" },
+        { extra = "cu130" },
+        { extra = "cu132" },
+    ],
+]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu", extra = "cpu" },
+    { index = "pytorch-cu126", extra = "cu126" },
+    { index = "pytorch-cu130", extra = "cu130" },
+    { index = "pytorch-cu132", extra = "cu132" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu132"
+url = "https://download.pytorch.org/whl/cu132"
+explicit = true

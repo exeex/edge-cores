@@ -11,12 +11,38 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SOURCE="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 OUT_DIR="$2"
 NAME="$3"
-LLVM_PREFIX="${LLVM_PREFIX:-/opt/homebrew/opt/llvm}"
-LLD_PREFIX="${LLD_PREFIX:-/opt/homebrew/opt/lld}"
-CLANG="${CLANG:-${LLVM_PREFIX}/bin/clang}"
-CLANGXX="${CLANGXX:-${LLVM_PREFIX}/bin/clang++}"
-LLVM_OBJDUMP="${LLVM_OBJDUMP:-${LLVM_PREFIX}/bin/llvm-objdump}"
-LLD="${LLD:-${LLD_PREFIX}/bin/ld.lld}"
+PYTHON="${PYTHON:-python3}"
+
+resolve_llvm_tool() {
+    local explicit="$1"
+    local name="$2"
+    local candidate
+    if [[ -n "${explicit}" ]]; then
+        printf '%s\n' "${explicit}"
+        return
+    fi
+    if candidate="$(command -v "${name}" 2>/dev/null)"; then
+        printf '%s\n' "${candidate}"
+        return
+    fi
+    for candidate in "/opt/homebrew/opt/llvm/bin/${name}" "/opt/homebrew/opt/lld/bin/${name}"; do
+        if [[ -x "${candidate}" ]]; then
+            printf '%s\n' "${candidate}"
+            return
+        fi
+    done
+    candidate="$(compgen -G "/usr/bin/${name}-[0-9]*" | sort -V | tail -n 1 || true)"
+    if [[ -n "${candidate}" ]]; then
+        printf '%s\n' "${candidate}"
+        return
+    fi
+    return 1
+}
+
+CLANG="$(resolve_llvm_tool "${CLANG:-}" clang)" || { echo "error: required LLVM tool is missing: clang" >&2; exit 1; }
+CLANGXX="$(resolve_llvm_tool "${CLANGXX:-}" clang++)" || { echo "error: required LLVM tool is missing: clang++" >&2; exit 1; }
+LLVM_OBJDUMP="$(resolve_llvm_tool "${LLVM_OBJDUMP:-}" llvm-objdump || true)"
+LLD="$(resolve_llvm_tool "${LLD:-}" ld.lld)" || { echo "error: required LLVM tool is missing: ld.lld" >&2; exit 1; }
 
 for tool in "${CLANG}" "${CLANGXX}" "${LLD}"; do
     if [[ ! -x "${tool}" ]]; then
@@ -57,7 +83,7 @@ if [[ -x "${LLVM_OBJDUMP}" ]]; then
         "${OUT_DIR}/${NAME}.elf" > "${OUT_DIR}/${NAME}.objdump"
 fi
 
-python3 "${REPO_ROOT}/tools/elf2mem128.py" \
+"${PYTHON}" "${REPO_ROOT}/tools/elf2mem128.py" \
     "${OUT_DIR}/${NAME}.elf" \
     -o "${OUT_DIR}/${NAME}.memh" \
     --words-file "${OUT_DIR}/${NAME}.words"

@@ -1,4 +1,5 @@
 .vscode
+.venv/
 .venv-aten/
 *.vcd
 *.pyc

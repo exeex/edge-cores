@@ -6,8 +6,8 @@ links the generated weights into a bare-metal RISC-V image, and checks the
 encrypted-core Verilator output against PyTorch.
 
 ```sh
-python3 -m pip install -r nnc/requirements.txt
-./example/llama/run.sh
+./scripts/setup-python.sh
+PYTHON=.venv/bin/python ./example/llama/run.sh
 ```
 
 Pass another model with `--model-file`, or generate and build without running
@@ -15,7 +15,9 @@ the simulator with `./example/llama/build.sh`. Compiler regression models live
 under `nnc/test/`; this example intentionally contains only the user-facing
 Llama source model.
 
-Set `PYTHON=/path/to/python` when PyTorch is installed in a virtual environment.
+The repository setup selects CPU or a compatible NVIDIA CUDA PyTorch build and
+syncs the locked `.venv`. Set `PYTHON=/path/to/python` only when intentionally
+using another virtual environment.
 
 Profile every lowered node in the complete tiny Llama transformer block:
 

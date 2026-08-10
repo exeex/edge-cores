@@ -8,6 +8,6 @@ mkdir -p "${OUT}"
 "${REPO_ROOT}/scripts/build-verilator.sh"
 "${SCRIPT_DIR}/build-edge.sh"
 words="$(tr -d '[:space:]' < "${OUT}/coremark.words")"
-(cd "${OUT}" && "${VERILATOR_OUT}/obj/Vedge_soc_demo_tb" +verilator+quiet "+mem128=${OUT}/coremark.memh" "+mem128_words=${words}" +max_cycles=3000000 +run_case_report=run_case.report) 2>&1 | tee "${OUT}/run.log"
+(cd "${OUT}" && "${VERILATOR_OUT}/obj/Vedge_soc_demo_tb" "+mem128=${OUT}/coremark.memh" "+mem128_words=${words}" +max_cycles=3000000 +run_case_report=run_case.report) 2>&1 | tee "${OUT}/run.log"
 grep -q 'TEST PASS' "${OUT}/run_case.report"
 grep -E 'cycle_delta=[0-9]+' "${OUT}/run.log" | tail -1

@@ -25,7 +25,6 @@ rm -f "${REPORT}" "${LOG}"
 (
     cd "${OUT_DIR}"
     "${SIM_EXE}" \
-        +verilator+quiet \
         "+mem128=${OUT_DIR}/actu_throughput.memh" \
         "+mem128_words=${words}" \
         +expected_return=0 \
