@@ -104,7 +104,7 @@ extern "C" int main(void)
         dtcm->zero[idx].value = 0;
     }
 
-    edge_tensor_setcsr<1, 2>();
+    edge_tensor_setcsr<bfloat16_t, int8_t>();
     edge_tensor_setn(MM64_SETN);
 
     uintptr_t cycle_start = edge_get_cycle();

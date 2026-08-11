@@ -70,6 +70,7 @@
 #define EDGE_DMA_MODE_USE_XY      0x1u
 #define EDGE_DMA_MODE_CIRCULAR    0x2u
 
+#define EDGE_TENSOR_DTYPE_BF16    1
 #define EDGE_TENSOR_WTYPE_BF16    1
 #define EDGE_TENSOR_WTYPE_INT8    2
 #define EDGE_TENSOR_LOAD_OPT_REUSE (1u << 1)
@@ -577,11 +578,41 @@ static inline float edge_f32_from_bf16(uint16_t value)
 }
 
 #ifdef __cplusplus
-template <int dtype, int wtype>
+struct bfloat16_t;
+
+template <typename T>
+struct edge_tensor_dtype_encoding {
+    static constexpr int value = -1;
+};
+
+template <>
+struct edge_tensor_dtype_encoding<bfloat16_t> {
+    static constexpr int value = EDGE_TENSOR_DTYPE_BF16;
+};
+
+template <typename T>
+struct edge_tensor_wtype_encoding {
+    static constexpr int value = -1;
+};
+
+template <>
+struct edge_tensor_wtype_encoding<bfloat16_t> {
+    static constexpr int value = EDGE_TENSOR_WTYPE_BF16;
+};
+
+template <>
+struct edge_tensor_wtype_encoding<int8_t> {
+    static constexpr int value = EDGE_TENSOR_WTYPE_INT8;
+};
+
+template <typename DType, typename WType>
 static inline void edge_tensor_setcsr()
 {
-    static_assert(dtype >= 0 && dtype < 32, "tensor dtype must fit imm5");
-    static_assert(wtype >= 0 && wtype < 32, "tensor wtype must fit imm5");
+    constexpr int dtype = edge_tensor_dtype_encoding<DType>::value;
+    constexpr int wtype = edge_tensor_wtype_encoding<WType>::value;
+    static_assert(dtype >= 0 && dtype < 32, "unsupported tensor data type");
+    static_assert(wtype >= 0 && wtype < 32,
+                  "unsupported tensor weight type");
 
     __asm__ volatile(
         "# edge.tensor.setcsr dtype=%c0 wtype=%c1\n"
@@ -795,6 +826,7 @@ static inline void edge_tensor_setout(void *out_ptr)
         : "memory");
 }
 
+/* Set the tile-wise accumulation or initial-bias input. */
 static inline void edge_tensor_setpsum(const void *psum_ptr)
 {
     uintptr_t edge_psum_ptr = (uintptr_t)psum_ptr;
@@ -809,6 +841,7 @@ static inline void edge_tensor_setpsum(const void *psum_ptr)
         : "memory");
 }
 
+/* Execute n product-specific Tensor tile iterations. */
 static inline void edge_tensor_setn(uintptr_t n)
 {
     uintptr_t edge_n = n;

@@ -32,7 +32,7 @@ inline void rope(Tensor<DType> xq_out, Tensor<DType> xk_out,
     const size_t vector_bytes = 8u * sizeof(DType);
     const size_t tile_bytes = kTileElements * sizeof(DType);
 
-    edge_tensor_setcsr<1, EDGE_TENSOR_WTYPE_BF16>();
+    edge_tensor_setcsr<::bfloat16_t, ::bfloat16_t>();
     edge_tensor_setn(1);
     if (q_input_dram) {
         edge_dcache_clean_range(xq.data, numel(xq) * sizeof(DType));

@@ -25,7 +25,7 @@ inline void add_impl(Tensor<DType> y, Tensor<DType> lhs, Tensor<DType> rhs,
     DType *out_stage = rhs_stage + 32u * 8u;
     DType *w_stage = out_stage + 32u * 8u;
 
-    edge_tensor_setcsr<1, EDGE_TENSOR_WTYPE_BF16>();
+    edge_tensor_setcsr<::bfloat16_t, ::bfloat16_t>();
     edge_dcache_clean_range(eye.data, 8u * 8u * sizeof(DType));
     edge_dma_start(eye.data, w_stage, 8u * 8u * sizeof(DType));
     edge_dma_sync();
@@ -134,7 +134,7 @@ inline void mul_impl(Tensor<DType> y, Tensor<DType> lhs, Tensor<DType> rhs,
     DType *out_stage = rhs_stage + kBatchElements;
     DType *w_stage = out_stage + kBatchElements;
 
-    edge_tensor_setcsr<1, EDGE_TENSOR_WTYPE_BF16>();
+    edge_tensor_setcsr<::bfloat16_t, ::bfloat16_t>();
     edge_dcache_clean_range(eye.data, 8u * 8u * sizeof(DType));
     edge_dma_start(eye.data, w_stage, 8u * 8u * sizeof(DType));
     edge_dma_sync();

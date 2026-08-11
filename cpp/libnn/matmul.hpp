@@ -140,7 +140,7 @@ inline void matmul_dispatch(Tensor<DType> y, Tensor<DType> lhs, Tensor<DType> rh
     const size_t k_blocks = k_cols / 8u;
     const size_t out_blocks = out_cols / 8u;
     const size_t total_tiles = head_count * k_blocks * out_blocks;
-    edge_tensor_setcsr<1, EDGE_TENSOR_WTYPE_BF16>();
+    edge_tensor_setcsr<::bfloat16_t, ::bfloat16_t>();
     edge_tensor_setn(rows);
     const size_t profile_begin = mm_read_cycle();
     size_t profile_lhs_issue = 0u;

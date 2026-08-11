@@ -182,7 +182,7 @@ __attribute__((always_inline)) inline void rms_norm_impl(
     edge_dma_start(eye.data, eye_stage, tile_bytes);
     edge_dma_sync();
 
-    edge_tensor_setcsr<1, EDGE_TENSOR_WTYPE_BF16>();
+    edge_tensor_setcsr<::bfloat16_t, ::bfloat16_t>();
 
     for (size_t batch_base = 0; batch_base < rows;
          batch_base += batch_rows) {

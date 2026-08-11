@@ -127,6 +127,10 @@ per row at one element per ACTU cycle.
 
 ## Development
 
+Low-level bare-metal software can use the DMA, Tensor, ACTU, CMPU, cache, and
+BF16 interfaces documented in the
+[Edge intrinsic user manual](cpp/intrinsic/README.md).
+
 The smallest NNC end-to-end example exports a PyTorch linear model, runs it on
 the encrypted-core Verilator model, and compares its BF16 output with PyTorch:
 

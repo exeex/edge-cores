@@ -60,7 +60,7 @@ inline void linear_impl(Tensor<bfloat16_t> y, Tensor<bfloat16_t> x,
         edge_dcache_clean_range(weight.data,
                                 out_cols * in_cols * sizeof(bfloat16_t));
     }
-    edge_tensor_setcsr<1, EDGE_TENSOR_WTYPE_BF16>();
+    edge_tensor_setcsr<::bfloat16_t, ::bfloat16_t>();
 
     for (size_t token_base = 0; token_base < rows; token_base += kTokenTile) {
         const size_t token_count =
