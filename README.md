@@ -43,6 +43,34 @@ Qwen and YOLO, is under development.
 | SRAM size (DTCM) | 128 KB | 256 KB | 1 MB |
 | BF16 peak throughput (TFLOPS) | 0.256 | 1.024 | 4.096 |
 
+### Cluster
+
+| Specification | `edge-p5 x8` |
+| --- | ---: |
+| Product positioning | Cluster-scale LLM inference |
+| NPU configuration | 8x edge-p5 |
+| Recommended process | TSMC N7 / N12, Samsung 8nm |
+| Estimated die area on TSMC N12 | 100–146 mm² (includes LPDDR5 PHY/controllers and NoC; varies with optional IP) |
+| Memory configuration | 8x 32-bit LPDDR5-6400 devices |
+| Aggregate theoretical memory bandwidth | 204.8 GB/s |
+| Estimated GPT-OSS-120B MXFP4 decode throughput | 56.7 token/s |
+| Estimated GPT-OSS-120B MXFP4 prefill throughput | 158 token/s |
+
+Both estimates assume 4.25-bit MXFP4 weights, a single user with `batch_size=1`,
+and 75% of theoretical memory bandwidth. The 75% factor includes simple
+contiguous KV-cache appends plus activation, interconnect, routing, DMA/DRAM,
+and compute overhead. Decode uses 5.1B active parameters; MoE prefill uses all
+117B parameters and the 32x64 tensor unit's 64x reuse factor.
+
+```text
+bandwidth = 8 * 32 bits * 6,400 MT/s / 8 = 204.8 GB/s
+decode = 0.75 * 204.8 / (5.1B * 4.25 / 8) = 56.7 token/s
+prefill = 64 * 0.75 * 204.8 / (117B * 4.25 / 8) = 158 token/s
+```
+
+Paged attention, multi-user KV-cache management, and vLLM multi-user batching
+are not modeled; they may provide higher aggregate throughput. On sufficiently
+large matrices, edge-p5 is expected to reach up to 99% MAC utilization.
 
 ## Edge E3 Performance
 
