@@ -20,3 +20,6 @@
 [submodule "src/edge-e3enc"]
 	path = src/edge-e3enc
 	url = git@github.com:exeex/edge-e3enc.git
+[submodule "src/edge-rv-lite"]
+	path = src/edge-rv-lite
+	url = https://github.com/exeex/edge-rv-lite
