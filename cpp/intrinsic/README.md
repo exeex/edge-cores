@@ -177,7 +177,7 @@ The lower-level descriptor setters are:
 | Function | Descriptor field |
 | --- | --- |
 | `edge_dma_setn(contiguous_bytes)` | Bytes copied for each fragment |
-| `edge_dma_setentry(entry_bytes)` | Bytes published as one circular entry |
+| `edge_dma_setentry(entry_bytes)` | Transferred-byte interval for each circular synchronization event |
 | `edge_dma_setx(source_stride_bytes, axis_max)` | X source stride and iteration count |
 | `edge_dma_sety(source_stride_bytes, axis_max)` | Y source stride and iteration count |
 | `edge_dma_setsrc(src)` | Source base address |
@@ -199,10 +199,29 @@ edge_dma_start_strided_circular(
     entry_bytes, ring_capacity_entries);
 ```
 
-It gathers source fragments and publishes entries to a circular buffer for a
-streaming consumer such as Tensor WLD or SLD. `entry_bytes` is the size of one
-published ring entry; `ring_capacity_entries` is the ring capacity, not a byte
-count.
+It gathers source fragments and writes them into a circular buffer for a
+streaming consumer such as Tensor WLD or SLD. `entry_bytes` controls the
+producer/consumer synchronization granularity: every time DMA has transferred
+another `entry_bytes` bytes into the ring, it publishes one circular entry-ready
+event. The consumer may then load that completed byte group.
+
+This event is not `edge_dma_sync()`. It is the per-entry synchronization used
+while DMA and an ASIC operate concurrently; `edge_dma_sync()` still waits for
+completion of the DMA job as a whole. The hardware connection between an event
+and a particular consumer is outside the software API.
+
+`entry_bytes` does not select the source stride or total transfer size. Those
+come from `contiguous_bytes` and the X/Y iteration fields. It only groups the
+resulting byte stream into consumer-visible synchronization points. For
+example, with 16-byte fragments and `entry_bytes = 128`, DMA publishes one
+entry-ready event after every eight fragments have contributed 128 bytes.
+
+`ring_capacity_entries` is the number of completed synchronization entries the
+ring can hold, not a byte count. The corresponding ring storage requirement is
+normally `entry_bytes * ring_capacity_entries` bytes. For current Tensor
+streams, set `entry_bytes` to the number of bytes that one WLD or SLD operation
+must consume. Each completed byte group then releases exactly one weight or
+scale load.
 
 C++ also provides these convenience overloads:
 
@@ -279,6 +298,12 @@ RTL.
 
 ### Weight and scale loading
 
+WLD means weight load: it reads one batch of weights into the Tensor unit. SLD
+means scale load: it reads one batch of scale or quantization data into the
+Tensor unit. Their circular forms wait for the next DMA entry-ready event and
+then consume the byte group completed at the configured `entry_bytes`
+boundary.
+
 | Function | Description |
 | --- | --- |
 | `edge_tensor_wld(ptr)` | Load a weight tile |
@@ -299,6 +324,14 @@ edge_tensor_wld(weight_tile);
 // Later descriptor, same resident weights:
 edge_tensor_wld<EDGE_TENSOR_LOAD_OPT_REUSE>();
 ```
+
+WLD and SLD are software-facing operation names, not a requirement that future
+products keep two separate loader modules. A later product may expose a more
+general parameterized weight/scale loader, and WSLD may gain additional
+configuration for quantization formats that combine weights, scales, or other
+metadata in different layouts. Applications should continue to use the
+intrinsic wrappers instead of depending on their current instruction encoding
+or internal module split.
 
 ### Job descriptor and launch
 
@@ -453,6 +486,9 @@ for (uintptr_t tile = 0; tile < tile_count; ++tile) {
 edge_tensor_sync();
 edge_dma_sync();
 ```
+
+Here `tile_bytes` is also the circular `entry_bytes`: every completed weight
+tile produces one entry-ready event and allows one circular WLD to proceed.
 
 If sustained DRAM fill bandwidth keeps up with Tensor consumption, the Tensor
 pipeline continues without weight-load bubbles. If DRAM falls behind, the

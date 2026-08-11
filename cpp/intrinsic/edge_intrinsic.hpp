@@ -344,6 +344,7 @@ static inline void edge_dma_setn(uintptr_t contiguous_bytes)
         : "memory");
 }
 
+/* Publish one circular consumer event per entry_bytes transferred. */
 static inline void edge_dma_setentry(uintptr_t entry_bytes)
 {
     register uintptr_t edge_entry __asm__("a0") = entry_bytes;
