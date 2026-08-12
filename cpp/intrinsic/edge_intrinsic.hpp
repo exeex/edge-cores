@@ -7,6 +7,15 @@
 #define EDGE_DCACHE_LINE_SIZE 64u
 #define EDGE_CSR_BREAK_ID 0x7e0u
 #define EDGE_CSR_SIM_PUTCHAR_ID 0x7e1u
+#define EDGE_CSR_HARDWARE_ID    0xfc0u
+
+#define EDGE_RV_CORE_ID_EDGE_RV      1u
+#define EDGE_RV_CORE_ID_EDGE_RV_LITE 2u
+
+#define EDGE_WEIGHT_SPEC_BF16 (1u << 0)
+#define EDGE_WEIGHT_SPEC_INT8 (1u << 1)
+#define EDGE_SCALE_SPEC_BF16  (1u << 0)
+#define EDGE_TENSOR_SPEC_V1   (1u << 0)
 
 /*
  * C-readable wrappers for the provisional StarEdge DMA and Tensor
@@ -1164,6 +1173,45 @@ static inline void edge_cmpu_sync(void)
 }
 
 #ifdef __cplusplus
+struct edge_hardware_info {
+    uint16_t rv_core_id;
+    uint16_t product_id;
+    uint8_t fpu_ver;
+    uint8_t vpu_ver;
+    uint8_t tensor_p;
+    uint8_t tensor_q;
+    uint8_t weight_spec;
+    uint8_t scale_spec;
+    uint8_t tensor_spec;
+};
+
+static inline uint64_t edge_get_hardware_id()
+{
+    uint64_t value;
+    __asm__ volatile("csrr %0, 0xfc0" : "=r"(value));
+    return value;
+}
+
+static inline edge_hardware_info edge_decode_hardware_id(uint64_t value)
+{
+    return {
+        static_cast<uint16_t>((value >> 55) & 0x1ffu),
+        static_cast<uint16_t>((value >> 40) & 0x7fffu),
+        static_cast<uint8_t>((value >> 36) & 0x0fu),
+        static_cast<uint8_t>((value >> 32) & 0x0fu),
+        static_cast<uint8_t>((value >> 28) & 0x0fu),
+        static_cast<uint8_t>((value >> 24) & 0x0fu),
+        static_cast<uint8_t>((value >> 16) & 0xffu),
+        static_cast<uint8_t>((value >> 8) & 0xffu),
+        static_cast<uint8_t>(value & 0xffu),
+    };
+}
+
+static inline uint32_t edge_get_hardware_model_id(uint64_t value)
+{
+    return static_cast<uint32_t>(value >> 40);
+}
+
 template <int csr_id>
 static inline uintptr_t edge_accel_getcsr()
 {
