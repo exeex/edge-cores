@@ -23,6 +23,11 @@ compact single-layer workloads.
 Both examples start as small PyTorch modules, compile to bare-metal C++,
 execute on the RTL, and compare their BF16 outputs with PyTorch.
 
+First follow the
+[`edge-bringup`](.codex/skills/edge-bringup/SKILL.md) workflow. It installs the
+required public submodules and creates the repository-owned `.venv` used by the
+commands below.
+
 Run the Llama 3 block:
 
 ```sh

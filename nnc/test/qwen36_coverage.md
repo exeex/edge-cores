@@ -7,7 +7,7 @@ attention-output gate, SwiGLU MLP, and residual structure.
 Run it with:
 
 ```sh
-PYTHON=.venv-aten/bin/python ./example/llama/run.sh \
+PYTHON=.venv/bin/python ./example/llama/run.sh \
   --model-file nnc/test/qwen36_source.py
 ```
 
