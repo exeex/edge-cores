@@ -1177,7 +1177,7 @@ staredge_add_edge_rom_benchmark(
   WORDS "${edge_soc_c_nelder_mead_dispatch_bench_words}"
   CUSTOM_HEADER "${STAREDGE_ROOT}/tests/software/include/edge_intrinsic.hpp"
   PLATFORM_HEADER "${STAREDGE_ROOT}/tests/software/bench/platform.hpp"
-  MARCH "rv64imaf_zba"
+  MARCH "rv64imfd_zba"
   ABI "lp64"
   EXTRA_INCLUDE_DIR "${edge_soc_c_nelder_mead_dispatch_bench_dir}"
   EXTRA_DEPENDS "${edge_soc_c_nelder_mead_pattern}"

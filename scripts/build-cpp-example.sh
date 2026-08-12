@@ -54,7 +54,7 @@ done
 mkdir -p "${OUT_DIR}"
 target_flags=(
     --target=riscv64-unknown-elf
-    -march=rv64im_zba
+    -march=rv64imfd_zba
     -mabi=lp64
     -mcmodel=medany
 )

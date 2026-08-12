@@ -76,6 +76,43 @@ static inline unsigned encode_unsigned(char *end, uint64_t value,
     return length;
 }
 
+static inline unsigned encode_decimal(char *end, uint64_t value)
+{
+    return encode_unsigned(end, value, 10u, false);
+}
+
+static inline uint64_t decimal_scale(unsigned digits)
+{
+    uint64_t scale = 1;
+    while (digits-- != 0u)
+        scale *= 10u;
+    return scale;
+}
+
+static inline void emit_decimal_digits(Writer &writer, uint64_t value)
+{
+    char digits[32];
+    const unsigned count = encode_decimal(digits + sizeof(digits), value);
+    const char *begin = digits + sizeof(digits) - count;
+    for (unsigned i = 0; i < count; ++i)
+        writer.put(begin[i]);
+}
+
+static inline void emit_zero_padded_decimal(Writer &writer, uint64_t value,
+                                            unsigned width)
+{
+    if (width == 0u)
+        return;
+
+    char digits[32];
+    const unsigned count = encode_decimal(digits + sizeof(digits), value);
+    const char *begin = digits + sizeof(digits) - count;
+    if (width > count)
+        writer.repeat('0', (int)(width - count));
+    for (unsigned i = 0; i < count && i < width; ++i)
+        writer.put(begin[i]);
+}
+
 static inline void emit_number(Writer &writer, uint64_t magnitude,
                                bool negative, unsigned base, bool uppercase,
                                bool alternate, bool plus, bool space,
@@ -123,6 +160,133 @@ static inline void emit_number(Writer &writer, uint64_t magnitude,
     writer.repeat('0', leading_zeroes);
     for (unsigned i = 0; i < digit_count; ++i)
         writer.put(digit_begin[i]);
+    if (left)
+        writer.repeat(' ', padding);
+}
+
+static inline void emit_text(Writer &writer, const char *text,
+                             bool negative, bool plus, bool space,
+                             bool left, bool zero, int width)
+{
+    int text_length = 0;
+    while (text[text_length] != '\0')
+        ++text_length;
+    const char sign = negative ? '-' : (plus ? '+' : (space ? ' ' : '\0'));
+    int padding = width - text_length - (sign != '\0');
+    if (padding < 0)
+        padding = 0;
+
+    if (!left && !zero)
+        writer.repeat(' ', padding);
+    if (sign != '\0')
+        writer.put(sign);
+    if (!left && zero)
+        writer.repeat('0', padding);
+    for (int i = 0; i < text_length; ++i)
+        writer.put(text[i]);
+    if (left)
+        writer.repeat(' ', padding);
+}
+
+__attribute__((always_inline)) static inline double
+normalize_vararg_double(double input)
+{
+    uint64_t raw;
+    __builtin_memcpy(&raw, &input, sizeof(raw));
+    const uint32_t high = (uint32_t)(raw >> 32);
+
+    // With Edge's reduced-precision D execution, float-to-double promotion
+    // leaves the canonical FP32 payload sign-extended in the ABI slot.
+    if (high == 0u || high == 0xffffffffu) {
+        const uint32_t bits = (uint32_t)raw;
+        float value;
+        __builtin_memcpy(&value, &bits, sizeof(value));
+        return (double)value;
+    }
+
+    // A source-level double arrives as IEEE64 bits in the LP64 vararg slot.
+    // Reload through FLD so the architectural load boundary rounds it into
+    // the physical FP32 FPR representation before D-encoded arithmetic.
+    volatile uint64_t slot = raw;
+    double value;
+    __asm__ volatile("fld %0, 0(%1)"
+                     : "=f"(value)
+                     : "r"(&slot)
+                     : "memory");
+    return value;
+}
+
+static inline void emit_fixed(Writer &writer, double input, bool uppercase,
+                              bool alternate, bool plus, bool space,
+                              bool left, bool zero, int width, int precision,
+                              bool precision_specified)
+{
+    input = normalize_vararg_double(input);
+    const bool negative = __builtin_signbit(input);
+    double value = negative ? -input : input;
+
+    if (__builtin_isnan(value)) {
+        emit_text(writer, uppercase ? "NAN" : "nan", false, plus, space,
+                  left, zero, width);
+        return;
+    }
+    if (__builtin_isinf(value)) {
+        emit_text(writer, uppercase ? "INF" : "inf", negative, plus, space,
+                  left, zero, width);
+        return;
+    }
+
+    if (!precision_specified)
+        precision = 6;
+    if (precision < 0)
+        precision = 0;
+
+    // A physical Edge FPR carries FP32 precision for D/S/H encodings.  Nine
+    // decimal fractional digits are therefore sufficient; wider requested
+    // precision is emitted as trailing zeroes.
+    const int calculated_precision = precision > 9 ? 9 : precision;
+    const uint64_t scale = decimal_scale((unsigned)calculated_precision);
+
+    // Keep debug formatting bounded to the integer range accepted by
+    // fcvt.lu.d.  D operations execute on the canonical FP32 FPR payload.
+    if (value >= 18446744073709551616.0) {
+        emit_text(writer, "<float-range>", negative, plus, space,
+                  left, zero, width);
+        return;
+    }
+
+    uint64_t whole = (uint64_t)value;
+    const double fraction = value - (double)whole;
+    uint64_t fractional =
+        (uint64_t)(fraction * (double)scale + 0.5);
+    if (fractional >= scale) {
+        fractional = 0;
+        ++whole;
+    }
+
+    char whole_digits[32];
+    const unsigned whole_count =
+        encode_decimal(whole_digits + sizeof(whole_digits), whole);
+    const bool decimal_point = precision != 0 || alternate;
+    const char sign = negative ? '-' : (plus ? '+' : (space ? ' ' : '\0'));
+    const int content_width = (sign != '\0') + (int)whole_count +
+                              (decimal_point ? 1 : 0) + precision;
+    int padding = width - content_width;
+    if (padding < 0)
+        padding = 0;
+
+    if (!left && !zero)
+        writer.repeat(' ', padding);
+    if (sign != '\0')
+        writer.put(sign);
+    if (!left && zero)
+        writer.repeat('0', padding);
+    emit_decimal_digits(writer, whole);
+    if (decimal_point)
+        writer.put('.');
+    emit_zero_padded_decimal(writer, fractional,
+                             (unsigned)calculated_precision);
+    writer.repeat('0', precision - calculated_precision);
     if (left)
         writer.repeat(' ', padding);
 }
@@ -259,7 +423,13 @@ static inline int edge_sim_vprintf(const char *format, va_list args)
                         left, zero, width, precision, precision_specified);
             break;
         }
-        case 'f': case 'F': case 'e': case 'E': case 'g': case 'G':
+        case 'f':
+        case 'F':
+            emit_fixed(writer, va_arg(ap, double), conversion == 'F',
+                       alternate, plus, space, left, zero, width, precision,
+                       precision_specified);
+            break;
+        case 'e': case 'E': case 'g': case 'G':
             (void)va_arg(ap, double);
             for (const char *text = "<float?>"; *text; ++text)
                 writer.put(*text);

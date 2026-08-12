@@ -130,6 +130,15 @@ length and an unaligned pointer: rounding can still select one cache line.
 | --- | --- |
 | `edge_get_cycle()` | Read the RISC-V `cycle` CSR |
 | `edge_sim_putchar(ch)` | Write one byte to the simulator console CSR |
+
+`edge_sim_console.hpp` provides a freestanding `printf`. Its `%f`/`%F`
+formatter consumes the C variadic `double` argument, supports width, sign,
+zero-pad and precision, and performs decimal conversion with D-encoded
+floating-point operations plus `fcvt` to integer. Edge accepts the D encoding
+and `double` ABI without compiler soft-float helpers, while the physical FPR
+and arithmetic datapath retain FP32 precision. `fld`/`fsd` convert between an
+IEEE64 memory payload and that canonical FP32 value. `%e` and `%g` remain
+diagnostic placeholders.
 | `edge_exit(return_value)` | Report a simulator return value, then remain in `wfi` forever |
 
 `edge_exit()` does not return. Applications normally use the repository's

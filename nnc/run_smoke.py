@@ -85,7 +85,7 @@ def build(args: argparse.Namespace, generated_dir: Path, build_dir: Path) -> Non
     lld = tool("LLD", "ld.lld")
     target = [
         "--target=riscv64-unknown-elf",
-        "-march=rv64imaf_zicsr_zfh_zfbfmin",
+        "-march=rv64imfd_zicsr_zfh",
         "-mabi=lp64",
         "-mcmodel=medany",
     ]
