@@ -30,8 +30,4 @@ words="$(tr -d '[:space:]' < "${OUT_DIR}/hello.words")"
 ) 2>&1 | tee "${LOG}" | sed '/^- .*Verilog \$finish$/d'
 
 grep -q "Hello from edge-e3!" "${LOG}"
-grep -q "Float debug:" "${LOG}"
-grep -q -- "-12.375000 2.000 +00003.50 2" "${LOG}"
-grep -q -- "Float edges: negzero=-0.00 carry=1.000 alt=2. left=\[1.25    \]" "${LOG}"
-grep -q -- "Float special: nan INF -inf wide=0.500000000000" "${LOG}"
 grep -q "TEST PASS" "${REPORT}"

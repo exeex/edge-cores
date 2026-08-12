@@ -244,7 +244,7 @@ C++ also provides these convenience overloads:
 start that supplies only source, target, and tile count. Prefer the strided
 circular API when a self-contained descriptor is required.
 
-## BF16 conversion and scalar types
+## Low-precision conversion and scalar types
 
 The raw BF16 helpers convert through the Edge BF16 load/store instructions:
 
@@ -263,10 +263,13 @@ provides volatile-pointer overloads and these lightweight types:
 | `float32_t` | 32 bits | Wrapper around `float`; arithmetic result type |
 | `float16_t` | 16 bits | Wrapper around compiler type `__fp16` |
 | `bfloat16_t` | 16 bits | Raw BF16 bits with Edge load/store conversion |
+| `fp8e5m2_t` | 8 bits | Raw FP8 E5M2 bits with Edge load/store conversion |
+| `fp8e4m3fn_t` | 8 bits | Raw finite FP8 E4M3 bits with Edge load/store conversion |
 
-Arithmetic operators on `float16_t` and `bfloat16_t` promote both operands to
-`float32_t`; they do not return a 16-bit value. Use `from_bits()` only when the
-input is already a raw BF16 encoding.
+Arithmetic operators on `bfloat16_t`, `fp8e5m2_t`, and `fp8e4m3fn_t` expand
+both operands and return `float`; they do not return a low-precision value.
+Use `from_bits()` only when the input already uses the corresponding raw
+encoding.
 
 The explicit C++ load/store wrappers are useful in generic code and have both
 ordinary and `volatile` pointer overloads:
@@ -283,6 +286,37 @@ bfloat16_t a = 1.5f;
 bfloat16_t b = bfloat16_t::from_bits(0x3f80u); // 1.0
 float32_t sum = a + b;
 ```
+
+FP8 casts load the byte with the corresponding FP memory instruction and
+return its expanded FP32 value in an FPR. Cast explicitly at a variadic call
+site so that the resulting `float` receives the required promotion to the
+`double` consumed by `%f`:
+
+```cpp
+fp8e5m2_t e5m2 = fp8e5m2_t::from_bits(0x3eu);     // 1.5
+fp8e4m3fn_t e4m3 = fp8e4m3fn_t::from_bits(0x3cu); // 1.5
+printf("%f %f\n", static_cast<float>(e5m2),
+       static_cast<float>(e4m3));
+```
+
+`bfloat16_t` supports the same direct cast, so low-precision debug code can
+use `static_cast<float>(value)` consistently for BF16 and both FP8 formats.
+
+Low-precision arithmetic operators return `float`, so expressions calculate in
+FP32 naturally:
+
+```cpp
+fp8e5m2_t lhs = 1.5f;
+fp8e5m2_t rhs = 0.5f;
+const float result = (lhs + rhs) * (lhs - rhs);
+fp8e5m2_t rounded = lhs * rhs;
+```
+
+The expression assigned to `result` stays in FP32. Only the explicitly
+low-precision `rounded` destination converts and stores the result back to FP8.
+
+Do not pass an FP8 struct directly through `...`: a C-style variadic call does
+not provide a target type that would select its user-defined conversion.
 
 ## Tensor engine
 

@@ -303,6 +303,7 @@ measurement details.
 | Integrate an accelerator | [`integrate-your-design`](.codex/skills/integrate-your-design/SKILL.md) |
 | Write high-performance software | **[Edge intrinsic user manual](cpp/intrinsic/README.md)** |
 | Run the hello smoke | [Hello example](example/hello/README.md) |
+| Debug FP8/BF16 and floating `printf` | [FP8/BF16 debug example](example/fp8_bf16_debug/README.md) |
 | Run tensor matmul | [Tensor example](example/tensor/README.md) |
 | Run PyTorch-to-NNC | [Llama example](example/llama/README.md) |
 | Run synthesis profiles | [Synthesis guide](synth/README.md) |

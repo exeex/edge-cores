@@ -108,10 +108,10 @@
      ((uint32_t)(funct3) << 12) |                                 \
      (((uint32_t)(imm12) & 0x1fu) << 7) | (uint32_t)(opcode))
 
-/* Provisional FP memory dtype slots: 101=bf16, 110=fp8e5m2, 111=fp8e3m4. */
+/* FP memory formats from src/edge-rv-lite/README.md. */
 #define EDGE_FP_MEM_BF16_FUNCT3 0x5u
 #define EDGE_FP_MEM_FP8E5M2_FUNCT3 0x6u
-#define EDGE_FP_MEM_FP8E3M4_FUNCT3 0x7u
+#define EDGE_FP_MEM_FP8E4M3FN_FUNCT3 0x7u
 
 #define EDGE_TENSOR_SETCSR_WORD(dtype, wtype)                         \
     EDGE_ENCODE_R_TYPE(EDGE_TENSOR_SETCSR_FUNCT7, (wtype), (dtype),   \
@@ -585,6 +585,141 @@ static inline uint16_t edge_bf16_from_f32_rne(float value)
 static inline float edge_f32_from_bf16(uint16_t value)
 {
     return edge_bf16_load_f32_ptr(&value);
+}
+
+static inline float edge_fp8e5m2_load_f32_ptr(const uint8_t *ptr)
+{
+    float out;
+
+    __asm__ volatile(
+        "# edge.lfp8e5m2\n"
+        ".insn i %c2, %c3, %0, 0(%1)\n"
+        : "=f"(out)
+        : "r"(ptr), "i"(EDGE_OPCODE_LOAD_FP),
+          "i"(EDGE_FP_MEM_FP8E5M2_FUNCT3), "m"(*ptr)
+        : "memory");
+
+    return out;
+}
+
+static inline float edge_fp8e4m3fn_load_f32_ptr(const uint8_t *ptr)
+{
+    float out;
+
+    __asm__ volatile(
+        "# edge.lfp8e4m3fn\n"
+        ".insn i %c2, %c3, %0, 0(%1)\n"
+        : "=f"(out)
+        : "r"(ptr), "i"(EDGE_OPCODE_LOAD_FP),
+          "i"(EDGE_FP_MEM_FP8E4M3FN_FUNCT3), "m"(*ptr)
+        : "memory");
+
+    return out;
+}
+
+#ifdef __cplusplus
+static inline float edge_fp8e5m2_load_f32_ptr(const volatile uint8_t *ptr)
+{
+    float out;
+
+    __asm__ volatile(
+        "# edge.lfp8e5m2.volatile\n"
+        ".insn i %c2, %c3, %0, 0(%1)\n"
+        : "=f"(out)
+        : "r"(ptr), "i"(EDGE_OPCODE_LOAD_FP),
+          "i"(EDGE_FP_MEM_FP8E5M2_FUNCT3), "m"(*ptr)
+        : "memory");
+
+    return out;
+}
+
+static inline float edge_fp8e4m3fn_load_f32_ptr(
+    const volatile uint8_t *ptr)
+{
+    float out;
+
+    __asm__ volatile(
+        "# edge.lfp8e4m3fn.volatile\n"
+        ".insn i %c2, %c3, %0, 0(%1)\n"
+        : "=f"(out)
+        : "r"(ptr), "i"(EDGE_OPCODE_LOAD_FP),
+          "i"(EDGE_FP_MEM_FP8E4M3FN_FUNCT3), "m"(*ptr)
+        : "memory");
+
+    return out;
+}
+#endif
+
+static inline void edge_fp8e5m2_store_f32_ptr(uint8_t *ptr, float value)
+{
+    __asm__ volatile(
+        "# edge.sfp8e5m2\n"
+        ".insn s %c3, %c4, %1, 0(%2)\n"
+        : "=m"(*ptr)
+        : "f"(value), "r"(ptr), "i"(EDGE_OPCODE_STORE_FP),
+          "i"(EDGE_FP_MEM_FP8E5M2_FUNCT3)
+        : "memory");
+}
+
+static inline void edge_fp8e4m3fn_store_f32_ptr(uint8_t *ptr, float value)
+{
+    __asm__ volatile(
+        "# edge.sfp8e4m3fn\n"
+        ".insn s %c3, %c4, %1, 0(%2)\n"
+        : "=m"(*ptr)
+        : "f"(value), "r"(ptr), "i"(EDGE_OPCODE_STORE_FP),
+          "i"(EDGE_FP_MEM_FP8E4M3FN_FUNCT3)
+        : "memory");
+}
+
+#ifdef __cplusplus
+static inline void edge_fp8e5m2_store_f32_ptr(volatile uint8_t *ptr,
+                                              float value)
+{
+    __asm__ volatile(
+        "# edge.sfp8e5m2.volatile\n"
+        ".insn s %c3, %c4, %1, 0(%2)\n"
+        : "=m"(*ptr)
+        : "f"(value), "r"(ptr), "i"(EDGE_OPCODE_STORE_FP),
+          "i"(EDGE_FP_MEM_FP8E5M2_FUNCT3)
+        : "memory");
+}
+
+static inline void edge_fp8e4m3fn_store_f32_ptr(volatile uint8_t *ptr,
+                                                float value)
+{
+    __asm__ volatile(
+        "# edge.sfp8e4m3fn.volatile\n"
+        ".insn s %c3, %c4, %1, 0(%2)\n"
+        : "=m"(*ptr)
+        : "f"(value), "r"(ptr), "i"(EDGE_OPCODE_STORE_FP),
+          "i"(EDGE_FP_MEM_FP8E4M3FN_FUNCT3)
+        : "memory");
+}
+#endif
+
+static inline uint8_t edge_fp8e5m2_from_f32_rne(float value)
+{
+    uint8_t out;
+    edge_fp8e5m2_store_f32_ptr(&out, value);
+    return out;
+}
+
+static inline uint8_t edge_fp8e4m3fn_from_f32_rne(float value)
+{
+    uint8_t out;
+    edge_fp8e4m3fn_store_f32_ptr(&out, value);
+    return out;
+}
+
+static inline float edge_f32_from_fp8e5m2(uint8_t value)
+{
+    return edge_fp8e5m2_load_f32_ptr(&value);
+}
+
+static inline float edge_f32_from_fp8e4m3fn(uint8_t value)
+{
+    return edge_fp8e4m3fn_load_f32_ptr(&value);
 }
 
 #ifdef __cplusplus
@@ -1366,6 +1501,103 @@ struct float16_t {
     }
 };
 
+struct fp8e5m2_t {
+    uint8_t bits;
+
+    fp8e5m2_t() = default;
+    explicit fp8e5m2_t(uint8_t bits_in) : bits(bits_in) {}
+    fp8e5m2_t(float32_t value) : bits(edge_fp8e5m2_from_f32_rne(value.value)) {}
+    fp8e5m2_t(float value) : bits(edge_fp8e5m2_from_f32_rne(value)) {}
+
+    static fp8e5m2_t from_bits(uint8_t bits_in)
+    {
+        fp8e5m2_t out;
+        out.bits = bits_in;
+        return out;
+    }
+
+    operator float() const { return edge_fp8e5m2_load_f32_ptr(&bits); }
+    operator float() const volatile
+    {
+        return edge_fp8e5m2_load_f32_ptr(&bits);
+    }
+
+    fp8e5m2_t &operator=(float32_t value)
+    {
+        edge_fp8e5m2_store_f32_ptr(&bits, value.value);
+        return *this;
+    }
+
+    fp8e5m2_t &operator=(float value)
+    {
+        edge_fp8e5m2_store_f32_ptr(&bits, value);
+        return *this;
+    }
+
+    volatile fp8e5m2_t &operator=(float32_t value) volatile
+    {
+        edge_fp8e5m2_store_f32_ptr(&bits, value.value);
+        return *this;
+    }
+
+    volatile fp8e5m2_t &operator=(float value) volatile
+    {
+        edge_fp8e5m2_store_f32_ptr(&bits, value);
+        return *this;
+    }
+};
+
+struct fp8e4m3fn_t {
+    uint8_t bits;
+
+    fp8e4m3fn_t() = default;
+    explicit fp8e4m3fn_t(uint8_t bits_in) : bits(bits_in) {}
+    fp8e4m3fn_t(float32_t value)
+        : bits(edge_fp8e4m3fn_from_f32_rne(value.value)) {}
+    fp8e4m3fn_t(float value) : bits(edge_fp8e4m3fn_from_f32_rne(value)) {}
+
+    static fp8e4m3fn_t from_bits(uint8_t bits_in)
+    {
+        fp8e4m3fn_t out;
+        out.bits = bits_in;
+        return out;
+    }
+
+    operator float() const { return edge_fp8e4m3fn_load_f32_ptr(&bits); }
+    operator float() const volatile
+    {
+        return edge_fp8e4m3fn_load_f32_ptr(&bits);
+    }
+
+    fp8e4m3fn_t &operator=(float32_t value)
+    {
+        edge_fp8e4m3fn_store_f32_ptr(&bits, value.value);
+        return *this;
+    }
+
+    fp8e4m3fn_t &operator=(float value)
+    {
+        edge_fp8e4m3fn_store_f32_ptr(&bits, value);
+        return *this;
+    }
+
+    volatile fp8e4m3fn_t &operator=(float32_t value) volatile
+    {
+        edge_fp8e4m3fn_store_f32_ptr(&bits, value.value);
+        return *this;
+    }
+
+    volatile fp8e4m3fn_t &operator=(float value) volatile
+    {
+        edge_fp8e4m3fn_store_f32_ptr(&bits, value);
+        return *this;
+    }
+};
+
+static_assert(sizeof(fp8e5m2_t) == 1, "FP8 E5M2 storage must be one byte");
+static_assert(sizeof(fp8e4m3fn_t) == 1,
+              "FP8 E4M3FN storage must be one byte");
+
 struct bfloat16_t {
     uint16_t bits;
 
@@ -1389,6 +1621,16 @@ struct bfloat16_t {
     operator float32_t() const volatile
     {
         return float32_t(edge_bf16_load_f32_ptr(&bits));
+    }
+
+    operator float() const
+    {
+        return edge_bf16_load_f32_ptr(&bits);
+    }
+
+    operator float() const volatile
+    {
+        return edge_bf16_load_f32_ptr(&bits);
     }
 
     bfloat16_t &operator=(float32_t value)
@@ -1542,24 +1784,68 @@ static inline float32_t operator/(const float16_t &lhs, float32_t rhs)
     return (float32_t)lhs / rhs;
 }
 
-static inline float32_t operator+(const bfloat16_t &lhs, const bfloat16_t &rhs)
+static inline float operator+(const bfloat16_t &lhs, const bfloat16_t &rhs)
 {
-    return (float32_t)lhs + (float32_t)rhs;
+    return static_cast<float>(lhs) + static_cast<float>(rhs);
 }
 
-static inline float32_t operator-(const bfloat16_t &lhs, const bfloat16_t &rhs)
+static inline float operator-(const bfloat16_t &lhs, const bfloat16_t &rhs)
 {
-    return (float32_t)lhs - (float32_t)rhs;
+    return static_cast<float>(lhs) - static_cast<float>(rhs);
 }
 
-static inline float32_t operator*(const bfloat16_t &lhs, const bfloat16_t &rhs)
+static inline float operator*(const bfloat16_t &lhs, const bfloat16_t &rhs)
 {
-    return (float32_t)lhs * (float32_t)rhs;
+    return static_cast<float>(lhs) * static_cast<float>(rhs);
 }
 
-static inline float32_t operator/(const bfloat16_t &lhs, const bfloat16_t &rhs)
+static inline float operator/(const bfloat16_t &lhs, const bfloat16_t &rhs)
 {
-    return (float32_t)lhs / (float32_t)rhs;
+    return static_cast<float>(lhs) / static_cast<float>(rhs);
+}
+
+static inline float operator+(const fp8e5m2_t &lhs, const fp8e5m2_t &rhs)
+{
+    return static_cast<float>(lhs) + static_cast<float>(rhs);
+}
+
+static inline float operator-(const fp8e5m2_t &lhs, const fp8e5m2_t &rhs)
+{
+    return static_cast<float>(lhs) - static_cast<float>(rhs);
+}
+
+static inline float operator*(const fp8e5m2_t &lhs, const fp8e5m2_t &rhs)
+{
+    return static_cast<float>(lhs) * static_cast<float>(rhs);
+}
+
+static inline float operator/(const fp8e5m2_t &lhs, const fp8e5m2_t &rhs)
+{
+    return static_cast<float>(lhs) / static_cast<float>(rhs);
+}
+
+static inline float operator+(const fp8e4m3fn_t &lhs,
+                              const fp8e4m3fn_t &rhs)
+{
+    return static_cast<float>(lhs) + static_cast<float>(rhs);
+}
+
+static inline float operator-(const fp8e4m3fn_t &lhs,
+                              const fp8e4m3fn_t &rhs)
+{
+    return static_cast<float>(lhs) - static_cast<float>(rhs);
+}
+
+static inline float operator*(const fp8e4m3fn_t &lhs,
+                              const fp8e4m3fn_t &rhs)
+{
+    return static_cast<float>(lhs) * static_cast<float>(rhs);
+}
+
+static inline float operator/(const fp8e4m3fn_t &lhs,
+                              const fp8e4m3fn_t &rhs)
+{
+    return static_cast<float>(lhs) / static_cast<float>(rhs);
 }
 
 static inline float32_t operator+(float32_t lhs, const bfloat16_t &rhs)
