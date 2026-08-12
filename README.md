@@ -1,6 +1,6 @@
 # edge-cores
 
-edge-cores is a family of dual-issue 64-bit RISC-V NPUs designed for neural
+edge-cores is a family of 64-bit RISC-V NPUs designed for neural
 network acceleration. Depending on the model, each NPU integrates:
 
 - 16–32 KB instruction cache
@@ -12,9 +12,9 @@ The SDK is developed with guidance from ChatGPT and uses standard open-source
 toolchains. The design does not depend on a custom compiler or simulator fork.
 Its PyTorch-to-NNC flow can compile models such as Llama, Qwen, and GPT-OSS into
 executable images.
-llama.cpp-compatible Q8 quantization is the primary planned deployment format.
+llama.cpp-compatible Q8 quantization and gpt-oss-xB mxfp4 quantization is the primary planned deployment format.
 
-The SDK currently supports Llama 3. Support for additional models, including
+The SDK currently supports Llama 3, qwen3.6. Support for additional models, including
 Qwen and YOLO, is under development.
 
 ## Product Line
