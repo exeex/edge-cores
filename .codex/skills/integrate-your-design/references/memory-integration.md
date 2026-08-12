@@ -1,8 +1,10 @@
 # DMA, SRAM, and LSU integration
 
-Require the user to supply DMA, DTCM/SRAM, and compute ASIC. Connect scalar
-LSU and ASIC/DMA access through an explicit arbiter or multi-port SRAM
-contract. Confirm:
+Require the user to supply DMA, DTCM/SRAM, and compute ASIC. For a systolic
+array, inventory the I/O SRAM, weight buffer, accumulator/output storage, and
+every system-memory transfer before choosing the DMA topology. Connect scalar
+LSU and ASIC/DMA access through an explicit arbiter or multi-port SRAM contract.
+Confirm:
 
 - configured region base/mask matching;
 - byte address to SRAM word-address conversion;

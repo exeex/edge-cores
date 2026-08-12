@@ -1,0 +1,4 @@
+interface:
+  display_name: "Integrate Your Own Design"
+  short_description: "Bring your accelerator into the shared platform"
+  default_prompt: "Use $integrate-your-design to integrate my accelerator, DMA, and SRAM with the Edge RV64 platform."

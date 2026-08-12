@@ -1,0 +1,4 @@
+interface:
+  display_name: "Edge Yosys Synth Report"
+  short_description: "Run Yosys synthesis and summarize resources"
+  default_prompt: "Use $edge-synth-report to synthesize edge-cores RTL and summarize its FPGA resource report."

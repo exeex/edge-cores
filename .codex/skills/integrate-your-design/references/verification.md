@@ -21,6 +21,8 @@ harness using the new intrinsic. Cover:
     addresses.
 11. Reset, illegal commands, redirect/kill, and outstanding commands or
     snapshots.
+12. Early FPU-generated NVFP4, FP8, BF16, or FP16 inputs against a software
+    reference, including conversion edge cases for every format the ASIC uses.
 
 Test depth 1 and the intended production depths. Verify the public consumer
 without private submodules when preparing a release. If no testbench exposes

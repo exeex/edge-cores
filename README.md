@@ -165,9 +165,9 @@ I want to add <feature>. Where should I start, and which tests should I run?
 
 ## For Research Teams
 
-Use Edge RV as the scalar and accelerator framework for integrating a custom
-ASIC, DMA, and DTCM/SRAM. The
-[`edge-custom-asic`](.codex/skills/edge-custom-asic/SKILL.md) skill explains the
+Bring your own accelerator or ASIC design, DMA, and DTCM/SRAM, and use Edge RV
+as its scalar and command framework. The
+[`integrate-your-design`](.codex/skills/integrate-your-design/SKILL.md) skill explains the
 instruction interface, snapshot mechanism, LSU integration, verification, and
 paper-artifact workflow.
 
@@ -180,7 +180,7 @@ dataflow, PPA, or application-level performance. Use
 Example prompt:
 
 ```text
-Use $edge-custom-asic to connect my accelerator and plan its paper artifact.
+Use $integrate-your-design to connect my accelerator and plan its paper artifact.
 ```
 
 ## For Open-Source Contributors

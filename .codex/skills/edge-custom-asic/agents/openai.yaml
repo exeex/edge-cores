@@ -1,4 +1,0 @@
-interface:
-  display_name: "Edge Custom ASIC Integration"
-  short_description: "Connect a custom ASIC to the Edge RV64 core"
-  default_prompt: "Use $edge-custom-asic to integrate my accelerator, DMA, and SRAM with the Edge RV64 core."
