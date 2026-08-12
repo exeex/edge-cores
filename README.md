@@ -2,31 +2,14 @@
 
 **The shortest way from PyTorch to ASICs.**
 
-Export a PyTorch model, lower it to bare-metal C++, and run it on RTL with
-Verilator. edge-cores provides the compiler, runtime, RV64 control plane, and
-accelerator interfaces needed to keep that path short.
+Export PyTorch to bare-metal C++ and run it on ASIC RTL with Verilator. Use the
+open-source `edge-rv` or `edge-rv-lite` control plane with your own accelerator,
+or start with the source-available `edge-e3` reference NPU.
 
-Use the open-source `edge-rv` or `edge-rv-lite` control plane with your own RTL,
-or run the source-available `edge-e3` reference NPU through the maintained
-PyTorch-to-NNC flow.
-
-The repository has two related layers:
-
-| Layer | Purpose | Availability |
-| --- | --- | --- |
-| `edge-rv` and `edge-rv-lite` | Reusable RV64 control and accelerator-integration platform | Open-source hardware |
-| Edge E/P products | Complete reference NPUs built around deployable workloads | Availability and license vary by product |
-
-The open platform is the main experimentation surface. You can attach an
-existing accelerator, develop a new compute unit, replace the memory hierarchy,
-or explore a complete ASIC configuration without adopting the architecture of
-an Edge reference product.
-
-On the maintained [`example/tensor`](example/tensor/README.md) workload,
-edge-e3 reaches **94.72% effective MAC utilization** for a 64x64x128 BF16
-matrix multiplication. This is an end-to-end RTL cycle measurement of the
-scheduled matmul interval, including its packed weight DMA, circular weight
-loads, Tensor execution, and synchronization—not an isolated Tensor-unit peak.
+The maintained [`example/tensor`](example/tensor/README.md) reaches **94.72%
+effective MAC utilization** on a 64x64x128 BF16 matmul. The end-to-end measured
+interval includes packed weight DMA, circular weight loads, Tensor execution,
+and synchronization.
 
 ## Run Llama 3 and Qwen 3.6 on edge-rv@e3 ASIC RTL
 
