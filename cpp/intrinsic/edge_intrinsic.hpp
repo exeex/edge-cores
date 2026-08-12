@@ -1173,6 +1173,72 @@ static inline void edge_cmpu_sync(void)
 }
 
 #ifdef __cplusplus
+struct fp4x16_t {
+    uint64_t data;
+};
+
+static_assert(sizeof(fp4x16_t) == sizeof(uint64_t),
+              "fp4x16_t must contain exactly sixteen packed nibbles");
+
+static inline float edge_fp4_to_fp32(uint8_t fp4)
+{
+    float result;
+    uintptr_t nibble = fp4 & 0x0fu;
+    __asm__ volatile(
+        "# fmv.s.xfp4\n"
+        ".insn r 0x53, 0, 0x7b, %0, %1, x0"
+        : "=f"(result) : "r"(nibble));
+    return result;
+}
+
+static inline uint8_t edge_fp32_to_fp4(float value)
+{
+    uintptr_t nibble;
+    __asm__ volatile(
+        "# fmv.xfp4.s\n"
+        ".insn r 0x53, 0, 0x73, %0, %1, x0"
+        : "=r"(nibble) : "f"(value));
+    return static_cast<uint8_t>(nibble);
+}
+
+static inline fp4x16_t edge_fp4x16_pack_next(fp4x16_t packed, float value)
+{
+    packed.data = (packed.data >> 4) |
+                  ((static_cast<uint64_t>(edge_fp32_to_fp4(value)) &
+                    UINT64_C(0xf)) << 60);
+    return packed;
+}
+
+// idx 0 addresses the least-significant nibble; valid indices are 0..15.
+static inline float get_element_fp4(fp4x16_t x, int idx)
+{
+    return edge_fp4_to_fp32(
+        static_cast<uint8_t>((x.data >> (idx * 4)) & 0x0fu));
+}
+
+static inline void set_element_fp4(fp4x16_t &x, float y, int idx)
+{
+    const unsigned shift = static_cast<unsigned>(idx) * 4u;
+    const uint64_t mask = UINT64_C(0xf) << shift;
+    const uint64_t nibble = static_cast<uint64_t>(edge_fp32_to_fp4(y));
+    x.data = (x.data & ~mask) | ((nibble & UINT64_C(0xf)) << shift);
+}
+
+static inline float unpack_next_fp4(fp4x16_t &x)
+{
+    const float result = edge_fp4_to_fp32(static_cast<uint8_t>(x.data));
+    x.data >>= 4;
+    return result;
+}
+
+// Call exactly sixteen times, starting from zero, to produce CUDA linear order.
+static inline void pack_next_fp4(fp4x16_t &x, float y)
+{
+    x.data = (x.data >> 4) |
+             ((static_cast<uint64_t>(edge_fp32_to_fp4(y)) & UINT64_C(0xf))
+              << 60);
+}
+
 struct edge_hardware_info {
     uint16_t rv_core_id;
     uint16_t product_id;
