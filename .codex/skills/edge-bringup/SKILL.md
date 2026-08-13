@@ -35,6 +35,35 @@ sudo apt-get update
 sudo apt-get install -y build-essential git cmake verilator llvm clang lld python3 python3-pip python3-venv
 ```
 
+### Why the maintained flow uses LLVM
+
+Use the standard Clang/LLVM toolchain for both sides of the build:
+
+- `clang`, `clang++`, and LLD build the freestanding RV64 target program;
+- Verilator comes from the host package manager, translates the RTL into C++,
+  and that generated host simulator is compiled with Clang; and
+- the same compiler family is available on both macOS and Ubuntu, avoiding a
+  separate RV64 GCC cross-toolchain and its associated setup and maintenance.
+
+This choice is also practical for simulator builds. Large Verilator-generated
+C++ builds with GCC have repeatedly exhausted memory on the maintained macOS
+development machines; Clang has been more reliable there.
+
+Do not add or prefer a GCC/G++ flow solely for possible differences in RV64
+instruction selection or scheduling. The ASIC command path is relatively
+insensitive to those differences: performance-critical kernels explicitly
+manage DMA, DTCM placement, synchronization, circular buffering, and
+accelerator overlap. Those kernel-level choices dominate here, so an occasional
+GCC code-generation advantage would have little system-level effect and does
+not justify maintaining another cross-platform compiler stack.
+
+When building the Verilator simulator, select Clang explicitly if the host
+defaults to another compiler:
+
+```sh
+CC=clang CXX=clang++ ./scripts/build-verilator.sh
+```
+
 Install uv using its maintained installation instructions when `uv` is absent:
 <https://docs.astral.sh/uv/getting-started/installation/>. The environment
 checker and public build scripts recognize both unversioned LLVM tools and
@@ -101,7 +130,7 @@ Use this bring-up sequence:
 ```sh
 git submodule status src/edge-e3
 ./.codex/skills/edge-bringup/scripts/check-env.sh
-./scripts/build-verilator.sh
+CC=clang CXX=clang++ ./scripts/build-verilator.sh
 PYTHON=.venv/bin/python ./example/hello/run.sh
 PYTHON=.venv/bin/python ./example/tensor/run.sh
 ```
