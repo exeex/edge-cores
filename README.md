@@ -161,6 +161,9 @@ ASIC set. A custom integration could use a name such as
 
 ### edge-rv@e3 reference composition
 
+![edge-rv@e3 architecture showing the edge-rv control plane, tensor unit, DMA,
+accelerator units, and shared DTCM](docs/images/edge-rv-e3-architecture.svg)
+
 The current reference composition includes:
 
 - 16 KB instruction cache
