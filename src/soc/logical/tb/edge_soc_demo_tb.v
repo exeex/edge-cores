@@ -22,6 +22,19 @@ module edge_soc_demo_tb;
   integer report_fd;
   reg [4095:0] report_path = "run_case.report";
   reg [4095:0] dump_path = "output.hex";
+`ifdef EDGE_PRIVATE_TENSOR_METRICS
+  integer tensor_engine_compute_valid_count;
+  integer tensor_engine_compute_busy_count;
+  integer tensor_engine_i_not_owned_count;
+  integer tensor_engine_psum_not_owned_count;
+  integer tensor_engine_out_not_owned_count;
+  integer tensor_engine_i_output_conflict_count;
+  integer tensor_engine_psum_output_conflict_count;
+  integer tensor_engine_output_write_count;
+  integer tensor_engine_start_count;
+  integer tensor_engine_start_run_sum;
+  integer tensor_engine_start_run_max;
+`endif
   wire core_csr_break_valid;
   wire [63:0] core_csr_break_code;
   wire [7:0] core_csr_break_seq_id;
@@ -62,6 +75,19 @@ module edge_soc_demo_tb;
       end
       $fdisplay(report_fd, "RETURN_VALUE=%0d", core_csr_break_code);
       $fdisplay(report_fd, "CYCLE=%0d", cycle);
+`ifdef EDGE_PRIVATE_TENSOR_METRICS
+      $fdisplay(report_fd, "TENSOR_ENGINE_COMPUTE_VALID_COUNT=%0d", tensor_engine_compute_valid_count);
+      $fdisplay(report_fd, "TENSOR_ENGINE_COMPUTE_BUSY_COUNT=%0d", tensor_engine_compute_busy_count);
+      $fdisplay(report_fd, "TENSOR_ENGINE_I_NOT_OWNED_COUNT=%0d", tensor_engine_i_not_owned_count);
+      $fdisplay(report_fd, "TENSOR_ENGINE_PSUM_NOT_OWNED_COUNT=%0d", tensor_engine_psum_not_owned_count);
+      $fdisplay(report_fd, "TENSOR_ENGINE_OUT_NOT_OWNED_COUNT=%0d", tensor_engine_out_not_owned_count);
+      $fdisplay(report_fd, "TENSOR_ENGINE_I_OUTPUT_CONFLICT_COUNT=%0d", tensor_engine_i_output_conflict_count);
+      $fdisplay(report_fd, "TENSOR_ENGINE_PSUM_OUTPUT_CONFLICT_COUNT=%0d", tensor_engine_psum_output_conflict_count);
+      $fdisplay(report_fd, "TENSOR_ENGINE_OUTPUT_WRITE_COUNT=%0d", tensor_engine_output_write_count);
+      $fdisplay(report_fd, "TENSOR_ENGINE_START_COUNT=%0d", tensor_engine_start_count);
+      $fdisplay(report_fd, "TENSOR_ENGINE_START_RUN_SUM=%0d", tensor_engine_start_run_sum);
+      $fdisplay(report_fd, "TENSOR_ENGINE_START_RUN_MAX=%0d", tensor_engine_start_run_max);
+`endif
       $fclose(report_fd);
     end
   endtask
@@ -157,6 +183,19 @@ module edge_soc_demo_tb;
   always #5 clk = ~clk;
 
   initial begin
+`ifdef EDGE_PRIVATE_TENSOR_METRICS
+    tensor_engine_compute_valid_count = 0;
+    tensor_engine_compute_busy_count = 0;
+    tensor_engine_i_not_owned_count = 0;
+    tensor_engine_psum_not_owned_count = 0;
+    tensor_engine_out_not_owned_count = 0;
+    tensor_engine_i_output_conflict_count = 0;
+    tensor_engine_psum_output_conflict_count = 0;
+    tensor_engine_output_write_count = 0;
+    tensor_engine_start_count = 0;
+    tensor_engine_start_run_sum = 0;
+    tensor_engine_start_run_max = 0;
+`endif
     if (!$value$plusargs("max_cycles=%d", max_cycles)) max_cycles = 500000;
     if (!$value$plusargs("run_case_report=%s", report_path))
       report_path = "run_case.report";
@@ -178,6 +217,55 @@ module edge_soc_demo_tb;
   always @(posedge clk) begin : monitor
     reg output_ok;
     if (rst_b) begin
+`ifdef EDGE_PRIVATE_TENSOR_METRICS
+      if (dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.compute_valid_q)
+        tensor_engine_compute_valid_count = tensor_engine_compute_valid_count + 1;
+      if (dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.compute_busy_q)
+        tensor_engine_compute_busy_count = tensor_engine_compute_busy_count + 1;
+      if (dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.compute_busy_q &&
+          !dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.i_req_owned)
+        tensor_engine_i_not_owned_count = tensor_engine_i_not_owned_count + 1;
+      if (dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.compute_busy_q &&
+          !dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.psum_req_owned)
+        tensor_engine_psum_not_owned_count = tensor_engine_psum_not_owned_count + 1;
+      if (dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.output_pending &&
+          !dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.out_req_owned)
+        tensor_engine_out_not_owned_count = tensor_engine_out_not_owned_count + 1;
+      if (dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.compute_busy_q &&
+          dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.read_conflicts_output)
+        tensor_engine_i_output_conflict_count = tensor_engine_i_output_conflict_count + 1;
+      if (dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.compute_busy_q &&
+          dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.psum_read_conflicts_output)
+        tensor_engine_psum_output_conflict_count = tensor_engine_psum_output_conflict_count + 1;
+      if (dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.output_write_fire)
+        tensor_engine_output_write_count = tensor_engine_output_write_count + 1;
+      if (dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.start_accept) begin
+        tensor_engine_start_count = tensor_engine_start_count + 1;
+        tensor_engine_start_run_sum = tensor_engine_start_run_sum +
+            dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+                .x_edge_tensor_unit_bank16.start_data_run_count;
+        if (dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+                .x_edge_tensor_unit_bank16.start_data_run_count >
+            tensor_engine_start_run_max)
+          tensor_engine_start_run_max =
+              dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+                  .x_edge_tensor_unit_bank16.start_data_run_count;
+      end
+`endif
       cycle <= cycle + 1;
       if (core_csr_putchar_valid) begin
         $write("%c", core_csr_putchar_char);
