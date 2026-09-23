@@ -18,13 +18,14 @@ EXAMPLE_MODEL = REPO_ROOT / "example/llama/model/llama3_source.py"
 DEFAULT_OUT = REPO_ROOT / "example/llama/build/harness"
 
 
-def run_case(model: Path, out_dir: Path, sim_exe: Path, *, profile: bool) -> dict[str, object]:
+def run_case(model: Path, out_dir: Path, sim_exe: Path, *, profile: bool,
+             max_cycles: int) -> dict[str, object]:
     build_dir = REPO_ROOT / "example/llama/build" / model.stem
     command = [
         sys.executable, str(REPO_ROOT / "nnc/run_smoke.py"),
         "--model-file", str(model), "--build-dir", str(build_dir),
         "--sim-exe", str(sim_exe), "--skip-verilator-build",
-        "--max-cycles", "2000000",
+        "--max-cycles", str(max_cycles),
     ]
     if profile:
         command.append("--profile")
@@ -74,6 +75,7 @@ def write_report(out_dir: Path, records: list[dict[str, object]]) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--max-cycles", type=int, default=5_000_000)
     return parser.parse_args()
 
 
@@ -98,7 +100,8 @@ def main() -> None:
     for index, model in enumerate(models, 1):
         profile = model.name == "llama3_source.py"
         print(f"[{index}/{len(models)}] {model.name}", flush=True)
-        record = run_case(model, args.out_dir, sim_exe, profile=profile)
+        record = run_case(model, args.out_dir, sim_exe, profile=profile,
+                          max_cycles=args.max_cycles)
         records.append(record)
         print(f"  {record['status']} cycles={record['cycles']} max_abs={record['max_abs']}",
               flush=True)
