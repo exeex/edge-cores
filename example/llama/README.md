@@ -43,6 +43,12 @@ keeps one log per model in the same directory.
 Generated headers, weights, binaries, and logs are written below
 `example/llama/build/` and are not source files.
 
+The compiler is split by responsibility: `nnc/graph.py` reads the PyTorch
+export and forward ABI, `nnc/lowering.py` maps graph operations to kernels,
+`nnc/weights.py` packs static data, `nnc/liveness.py` finds temporary tensor
+last uses, and `nnc/codegen.py` renders the C++ headers. `nnc/compiler.py`
+provides the command-line entry point and writes the artifacts.
+
 The generated `weight.bin` and `input.bin` are linked into `.nnedge_weights`
 and `.nnedge_inputs`. `init.hpp` binds tensors using each section's start
 address plus the compiler's offset. Output storage lives in the ELF's

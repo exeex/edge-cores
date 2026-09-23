@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import csv
 import glob
-import importlib.util
 import math
 import os
 from pathlib import Path
@@ -14,7 +13,6 @@ import shutil
 import struct
 import subprocess
 import sys
-from typing import Any
 
 import torch
 
@@ -23,16 +21,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MODEL = REPO_ROOT / "example/llama/model/llama3_source.py"
 DEFAULT_MAIN = REPO_ROOT / "example/llama/src/smoke_main.cpp"
 
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-def compiler_module() -> Any:
-    path = Path(__file__).with_name("compiler.py")
-    spec = importlib.util.spec_from_file_location("edge_nnc_compiler", path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load {path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+from nnc import compiler
 
 
 def tool(env_name: str, fallback: str) -> str:
@@ -55,18 +47,10 @@ def tool(env_name: str, fallback: str) -> str:
 
 
 def generate(model_file: Path, generated_dir: Path) -> tuple[int, ...]:
-    compiler = compiler_module()
     model, example_args = compiler.load_model_example(model_file)
     abi = compiler.ForwardABI.from_example(model, example_args)
     program, weights = compiler.compile_model(model, example_args)
-    generated_dir.mkdir(parents=True, exist_ok=True)
-    (generated_dir / "forward.hpp").write_text(
-        compiler.ForwardRenderer(program, abi, weights).render(), encoding="utf-8"
-    )
-    init = compiler.InitRenderer(abi, weights)
-    (generated_dir / "init.hpp").write_text(init.render(), encoding="utf-8")
-    init.write_input_bin(generated_dir / "input.bin")
-    weights.write_weight_bin(generated_dir / "weight.bin")
+    compiler.write_artifacts(abi, program, weights, generated_dir)
 
     with torch.no_grad():
         result = model(*example_args)

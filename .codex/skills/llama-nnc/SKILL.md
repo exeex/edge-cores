@@ -11,8 +11,10 @@ encrypted core.
 ## Read first
 
 - Read `example/llama/README.md` for the user-facing flow and artifact locations.
-- Read `nnc/compiler.py` before changing export, lowering, ABI, liveness, DRAM
-  preferences, or weight packing.
+- Read `nnc/compiler.py` and the affected module before changing export
+  (`graph.py`), lowering and DRAM preferences (`lowering.py`), liveness
+  (`liveness.py`), weight packing (`weights.py`), or generated headers
+  (`codegen.py`).
 - Read the affected header in `cpp/libnn/` before changing an operator.
 - Read `.codex/skills/edge-tensor-example/SKILL.md` for Tensor/DMA intrinsic
   changes and `.codex/skills/edge-verilator-demo/SKILL.md` for simulator changes.
@@ -26,9 +28,10 @@ private RTL dependency, or old CMake harness. Use `cpp/libnn/`,
 For a semantic operator change:
 
 1. Define or update its PyTorch custom op in `nnc/test/smoke_<op>.py`.
-2. Update target mapping, lowering metadata, shape inference, or weight packing
-   in `nnc/compiler.py` only where needed.
-3. Render its C++ call in `ForwardRenderer`.
+2. Update target mapping in `nnc/graph.py`, lowering metadata and shape
+   inference in `nnc/lowering.py`, or weight packing in `nnc/weights.py` only
+   where needed.
+3. Render its C++ call in `nnc/codegen.py`'s `ForwardRenderer`.
 4. Implement it in `cpp/libnn/<op>.hpp` and expose it from `cpp/libnn/ops.hpp`.
 5. Run the compiler tests and the smallest relevant encrypted-core smoke.
 
