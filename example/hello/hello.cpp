@@ -1,7 +1,9 @@
-#include "intrinsic/edge_sim_console.hpp"
+#include "intrinsic/edge_intrinsic.hpp"
 
 extern "C" int main(void)
 {
-    printf("Hello from edge-e3!\n");
+    static const char message[] = "Hello from edge-e3!\n";
+    for (const char *cursor = message; *cursor != '\0'; ++cursor)
+        edge_sim_putchar(*cursor);
     return 0;
 }

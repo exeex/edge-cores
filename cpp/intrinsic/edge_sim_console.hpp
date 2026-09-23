@@ -204,9 +204,10 @@ normalize_vararg_double(double input)
         return (double)value;
     }
 
-    // A source-level double arrives as IEEE64 bits in the LP64 vararg slot.
-    // Reload through FLD so the architectural load boundary rounds it into
-    // the physical FP32 FPR representation before D-encoded arithmetic.
+    // A source-level double arrives as IEEE64 bits in the vararg slot.  The
+    // RV32 hello path is built without F/D, so keep the software value intact
+    // there; an F/D-enabled product may use the architectural reload below.
+#if defined(__riscv_flen) && __riscv_flen >= 64
     volatile uint64_t slot = raw;
     double value;
     __asm__ volatile("fld %0, 0(%1)"
@@ -214,6 +215,9 @@ normalize_vararg_double(double input)
                      : "r"(&slot)
                      : "memory");
     return value;
+#else
+    return input;
+#endif
 }
 
 static inline void emit_fixed(Writer &writer, double input, bool uppercase,

@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
 // Public encrypted-core testbench. Keep this on module ports and public SoC
-// RAM; the hierarchy below edge_core_debug is intentionally obfuscated.
+// RAM; the hierarchy below edge_core_edge32_top is intentionally obfuscated.
 module edge_soc_demo_tb;
   localparam ADDR_WIDTH = 40;
   localparam DATA_WIDTH = 128;
@@ -167,8 +167,12 @@ module edge_soc_demo_tb;
     if (!$value$plusargs("dump_file=%s", dump_path)) dump_path = "output.hex";
     repeat (4) @(posedge clk);
     rst_b = 1'b1;
-    @(negedge clk); core_start = 1'b1;
-    @(negedge clk); core_start = 1'b0;
+    // edge32_axi_core synchronizes reset internally; keep the start request
+    // asserted across that two-cycle release window.
+    repeat (3) @(negedge clk);
+    core_start = 1'b1;
+    repeat (3) @(negedge clk);
+    core_start = 1'b0;
   end
 
   always @(posedge clk) begin : monitor

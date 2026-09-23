@@ -74,7 +74,13 @@ JSON_SYMBOL_TYPES = {
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--private-root", type=Path, default=Path("src/edge-e3"))
-    parser.add_argument("--public-root", type=Path, default=Path("src/edge-rv"))
+    parser.add_argument(
+        "--public-root",
+        type=Path,
+        action="append",
+        dest="public_roots",
+        help="unchanged public RTL root; repeat for multiple submodules",
+    )
     parser.add_argument("--output", type=Path, default=Path("src/edge-e3enc"))
     parser.add_argument(
         "--portable-output",
@@ -84,22 +90,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--license", type=Path, default=Path("src/edge-e3/LICENSE.md"))
     parser.add_argument("--product-name", default="edge-e3")
     parser.add_argument("--artifact-stem", default="edge_e3enc")
-    parser.add_argument("--public-filelist-name", default="edge_rv_public.fl")
+    parser.add_argument("--public-filelist-name", default="edge32_public.fl")
     parser.add_argument("--namespace", default="edge-e3-obfuscate")
     parser.add_argument("--soc-top", default="edge_soc_top")
     parser.add_argument(
         "--regenerate-command",
-        default="cmake --build build/cmake-harness --target edge_e3_obfuscate",
+        default="python3 tools/package_obfuscated_rtl.py",
     )
     parser.add_argument(
         "--filelist", type=Path,
-        default=Path("src/edge-e3/edge_core/filelists/edge_core_top_verilator_prod.fl"),
+        default=Path("src/edge-e3/edge_core/filelists/edge_core_edge32_top_verilator.fl"),
     )
     parser.add_argument(
         "--soc", type=Path, default=Path("src/soc/logical/common/edge_soc_top.v")
     )
-    parser.add_argument("--soc-core-module", default="edge_core_debug")
-    parser.add_argument("--top", default="edge_core_top")
+    parser.add_argument("--soc-core-module", default="edge_core_edge32_top")
+    parser.add_argument("--top", default="edge_core_edge32_top")
     parser.add_argument("--salt", default="edge-e3-public")
     parser.add_argument("--sram-pattern", action="append", default=[])
     parser.add_argument("--keep", action="append", default=[])
@@ -231,6 +237,14 @@ def is_below(path: Path, root: Path) -> bool:
     return path == root or root in path.parents
 
 
+def is_below_any(path: Path, roots: list[Path]) -> bool:
+    return any(is_below(path, root) for root in roots)
+
+
+def relative_roots(roots: list[Path], repo_root: Path) -> str:
+    return ", ".join(root.relative_to(repo_root).as_posix() for root in roots)
+
+
 def module_names(text: str) -> set[str]:
     return {name for name, _ in module_headers(text)}
 
@@ -292,8 +306,17 @@ def write_plain_filelist(path: Path, files: list[Path]) -> None:
     path.write_text("".join(str(item) + "\n" for item in files))
 
 
+def verilator_include_args(include_dirs: list[Path]) -> list[str]:
+    return [f"-I{include_dir}" for include_dir in include_dirs]
+
+
 def run_json(
-    verilator: str, top: str, rtl_files: list[Path], sram_files: list[Path], temp: Path
+    verilator: str,
+    top: str,
+    rtl_files: list[Path],
+    sram_files: list[Path],
+    include_dirs: list[Path],
+    temp: Path,
 ) -> tuple[Path, int]:
     stub = temp / "sram_blackboxes.v"
     stub.write_text("\n".join(make_blackbox_stub(path.read_text()) for path in sram_files))
@@ -305,7 +328,8 @@ def run_json(
     command = [
         verilator, "-Wno-fatal", "--json-only", "--top-module", top,
         "--Mdir", str(temp / "obj-json"), "--json-only-output", str(json_path),
-        "--json-only-meta-output", str(meta_path), "-f", str(parse_filelist),
+        "--json-only-meta-output", str(meta_path),
+        *verilator_include_args(include_dirs), "-f", str(parse_filelist),
     ]
     with warning_path.open("w") as warnings:
         completed = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=warnings)
@@ -342,13 +366,16 @@ def rewrite(text: str, symbols: dict[str, str], keep_comments: bool) -> str:
     return "".join(pieces)
 
 
-def validate_mixed(verilator: str, top: str, mixed_filelist: Path, temp: Path) -> int:
+def validate_mixed(
+    verilator: str, top: str, mixed_filelist: Path, include_dirs: list[Path], temp: Path
+) -> int:
     warning_path = temp / "verilator-mixed.log"
     command = [
         verilator, "-Wno-fatal", "--json-only", "--top-module", top,
         "--Mdir", str(temp / "obj-mixed"), "--json-only-output",
         str(temp / "mixed.tree.json"), "--json-only-meta-output",
-        str(temp / "mixed.tree.meta.json"), "-f", str(mixed_filelist),
+        str(temp / "mixed.tree.meta.json"), *verilator_include_args(include_dirs),
+        "-f", str(mixed_filelist),
     ]
     with warning_path.open("w") as warnings:
         completed = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=warnings)
@@ -359,7 +386,12 @@ def validate_mixed(verilator: str, top: str, mixed_filelist: Path, temp: Path) -
 
 
 def validate_soc(
-    verilator: str, soc_top: str, soc_files: list[Path], mixed_files: list[Path], temp: Path
+    verilator: str,
+    soc_top: str,
+    soc_files: list[Path],
+    mixed_files: list[Path],
+    include_dirs: list[Path],
+    temp: Path,
 ) -> int:
     filelist = temp / "soc-mixed.fl"
     write_plain_filelist(filelist, mixed_files + soc_files)
@@ -368,7 +400,8 @@ def validate_soc(
         verilator, "-Wno-fatal", "--json-only", "--top-module", soc_top,
         "--Mdir", str(temp / "obj-soc"), "--json-only-output",
         str(temp / "soc.tree.json"), "--json-only-meta-output",
-        str(temp / "soc.tree.meta.json"), "-f", str(filelist),
+        str(temp / "soc.tree.meta.json"), *verilator_include_args(include_dirs),
+        "-f", str(filelist),
     ]
     with warning_path.open("w") as warnings:
         completed = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=warnings)
@@ -381,13 +414,20 @@ def validate_soc(
 def main() -> int:
     args = parse_args()
     private_root = args.private_root.resolve()
-    public_root = args.public_root.resolve()
+    public_roots = [
+        path.resolve()
+        for path in (
+            args.public_roots
+            or [Path("src/edge-32"), Path("src/edge-asic")]
+        )
+    ]
+    include_dirs = [directory for root in public_roots for directory in (root, root / "rtl")]
     output = args.output.resolve()
     license_file = args.license.resolve()
     filelist = args.filelist.resolve()
     soc = args.soc.resolve()
     repo_root = private_root.parent.parent
-    if not private_root.is_dir() or not public_root.is_dir():
+    if not private_root.is_dir() or any(not root.is_dir() for root in public_roots):
         raise SystemExit("private or public RTL root does not exist")
     if not filelist.is_file() or not soc.is_file() or not license_file.is_file():
         raise SystemExit("filelist, SoC boundary, or license file does not exist")
@@ -399,7 +439,7 @@ def main() -> int:
     missing = [path for path in all_files if not path.is_file()]
     outside = [
         path for path in all_files
-        if not is_below(path, private_root) and not is_below(path, public_root)
+        if not is_below(path, private_root) and not is_below_any(path, public_roots)
     ]
     if missing:
         raise SystemExit("missing filelist inputs: " + ", ".join(map(str, missing)))
@@ -409,7 +449,7 @@ def main() -> int:
             + ", ".join(map(str, outside))
         )
     private_files = [path for path in all_files if is_below(path, private_root)]
-    public_files = [path for path in all_files if is_below(path, public_root)]
+    public_files = [path for path in all_files if is_below_any(path, public_roots)]
     private_sram_files = [
         path for path in private_files if is_sram(path, repo_root, patterns)
     ]
@@ -445,7 +485,7 @@ def main() -> int:
     stage = Path(tempfile.mkdtemp(prefix=f".{output.name}.", dir=output.parent))
     try:
         json_path, source_warnings = run_json(
-            args.verilator, args.top, all_rtl_files, all_sram_files, temp
+            args.verilator, args.top, all_rtl_files, all_sram_files, include_dirs, temp
         )
         private_source_symbols: set[str] = set()
         for text in list(texts.values()) + list(private_sram_texts.values()):
@@ -490,7 +530,9 @@ def main() -> int:
         nosram_fl = stage / f"{args.artifact_stem}_nosram.fl"
         validation_fl = temp / "mixed-absolute.fl"
         write_plain_filelist(validation_fl, public_files + [combined, sram_combined])
-        mixed_warnings = validate_mixed(args.verilator, args.top, validation_fl, temp)
+        mixed_warnings = validate_mixed(
+            args.verilator, args.top, validation_fl, include_dirs, temp
+        )
         soc_files = [
             repo_root / "src/soc/logical/axi/edge_axi_interconnect.v",
             repo_root / "src/soc/logical/mem/edge_axi_ram.v",
@@ -499,7 +541,7 @@ def main() -> int:
         ]
         soc_warnings = validate_soc(
             args.verilator, args.soc_top, soc_files,
-            public_files + [combined, sram_combined], temp
+            public_files + [combined, sram_combined], include_dirs, temp
         )
 
         portable_output = args.portable_output or output.relative_to(repo_root)
@@ -536,7 +578,7 @@ def main() -> int:
             "mixed_warning_count": mixed_warnings,
             "soc_warning_count": soc_warnings,
             "salt_sha256": hashlib.sha256(args.salt.encode()).hexdigest(),
-            "public_root": public_root.relative_to(repo_root).as_posix(),
+            "public_roots": [root.relative_to(repo_root).as_posix() for root in public_roots],
             "private_root": private_root.relative_to(repo_root).as_posix(),
             "product_name": args.product_name,
             "artifact_stem": args.artifact_stem,
@@ -548,7 +590,7 @@ def main() -> int:
             f"# Generated {args.product_name} RTL\n\n"
             f"`{combined.name}` and `{sram_combined.name}` contain only obfuscated "
             f"private {args.product_name} RTL.\n"
-            f"`{public_fl.name}` lists unchanged open RTL from `{public_root.relative_to(repo_root)}`. "
+            f"`{public_fl.name}` lists unchanged open RTL from `{relative_roots(public_roots, repo_root)}`. "
             f"Use `{mixed_fl.name}` for the complete design, or combine the private "
             "RTL with target-specific SRAM models/replacements for FPGA/OpenROAD.\n\n"
             f"The obfuscated {args.product_name} RTL is distributed under the "
@@ -557,7 +599,7 @@ def main() -> int:
             f"```sh\n{args.regenerate_command}\n```\n\n"
             "FPGA/Yosys can consume the mixed list and select its `_yosys.v` SRAM "
             "variants:\n\n"
-            "```sh\nsynth/run_yosys.sh edge_core_top xilinx "
+            "```sh\nsynth/run_yosys.sh edge_core_edge32_top xilinx "
             f"{portable_output / mixed_fl.name}\n```\n\n"
             "OpenROAD can consume the same list; its runner substitutes central "
             "`*_openroad.v` blackboxes for matching SRAM/cache-array entries.\n"
@@ -584,7 +626,7 @@ def main() -> int:
         print(
             f"generated {output / combined.name}: {len(symbols)} symbols renamed; "
             f"{len(private_sram_files)} private SRAM/array sources packaged separately; "
-            f"{len(public_files)} public RV64 sources unchanged; "
+            f"{len(public_files)} public RTL sources unchanged; "
             "Verilator validation passed"
         )
     finally:

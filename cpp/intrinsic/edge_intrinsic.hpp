@@ -1,6 +1,13 @@
 #ifndef EDGE_INTRINSIC_HPP
 #define EDGE_INTRINSIC_HPP
 
+#if defined(__riscv) && defined(__riscv_xlen) && __riscv_xlen == 32
+
+/* RV32 instruction encoding is owned by the public edge-32 submodule. */
+#include "edge32_intrinsic.hpp"
+
+#else
+
 #include <stdint.h>
 #include "edge_memory_map.hpp"
 
@@ -516,6 +523,7 @@ static inline void edge_dma_start_strided_circular(
                                     source_stride_bytes, repeat_count,
                                     0u, 1u, repeat_count);
 }
+
 #endif
 
 static inline float edge_bf16_load_f32_ptr(const uint16_t *ptr)
@@ -1889,4 +1897,6 @@ static inline float32_t operator/(const bfloat16_t &lhs, float32_t rhs)
 }
 #endif
 
-#endif
+#endif /* legacy RV64 path */
+
+#endif /* EDGE_INTRINSIC_HPP */

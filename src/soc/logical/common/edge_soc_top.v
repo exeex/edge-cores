@@ -260,6 +260,8 @@ module edge_soc_top #(
   wire [(DATA_WIDTH/8)-1:0] err_wstrb;
   wire err_wvalid;
 
+  /* Legacy edge-rv core boundary retained below for reference only. */
+  /*
   assign core0_pad_halted = core_halted;
   assign core0_pad_lpmd_b[1:0] = 2'b11;
 `ifdef EDGE_DEBUG
@@ -455,6 +457,123 @@ module edge_soc_top #(
     .debug_biu_write_owner_valid(debug_biu_write_owner_valid),
     .debug_biu_write_owner_dma(debug_biu_write_owner_dma)
 `endif
+  );
+  */
+
+  wire core_illegal;
+  wire [63:0] core_debug_x31;
+  wire core_asic_power_enable;
+  wire core_accel_dma_busy;
+  wire core_putchar_valid;
+  wire [7:0] core_putchar_char;
+
+  assign core0_pad_halted = core_halted;
+  assign core0_pad_lpmd_b[1:0] = 2'b11;
+  assign core0_pad_retire = 1'b0;
+  assign core0_pad_retire_pc = {ADDR_WIDTH{1'b0}};
+  assign core_ebreak_valid = core_illegal;
+  assign core_ebreak_seq_id = 8'b0;
+  assign core_ebreak_epoch = 4'b0;
+  assign core_csr_break_valid = core_halted;
+  assign core_csr_break_code = core_debug_x31;
+  assign core_csr_break_seq_id = 8'b0;
+  assign core_csr_break_epoch = 4'b0;
+  assign core_csr_putchar_valid = core_putchar_valid;
+  assign core_csr_putchar_char = core_putchar_char;
+  assign edge_dma_busy = core_accel_dma_busy;
+`ifdef EDGE_DEBUG
+  assign debug_biu_read_owner_valid = 1'b0;
+  assign debug_biu_read_owner_dma = 1'b0;
+  assign debug_biu_write_owner_valid = 1'b0;
+  assign debug_biu_write_owner_dma = 1'b0;
+`endif
+
+  assign bringup_core_arready = 1'b0;
+  assign bringup_core_rdata = {DATA_WIDTH{1'b0}};
+  assign bringup_core_rid = {ID_WIDTH{1'b0}};
+  assign bringup_core_rlast = 1'b0;
+  assign bringup_core_rresp = 2'b0;
+  assign bringup_core_rvalid = 1'b0;
+  assign bringup_core_awready = 1'b0;
+  assign bringup_core_bid = {ID_WIDTH{1'b0}};
+  assign bringup_core_bresp = 2'b0;
+  assign bringup_core_bvalid = 1'b0;
+  assign bringup_core_wready = 1'b0;
+  assign bringup_dma_arready = 1'b0;
+  assign bringup_dma_rdata = {DATA_WIDTH{1'b0}};
+  assign bringup_dma_rid = {ID_WIDTH{1'b0}};
+  assign bringup_dma_rlast = 1'b0;
+  assign bringup_dma_rresp = 2'b0;
+  assign bringup_dma_rvalid = 1'b0;
+  assign bringup_dma_awready = 1'b0;
+  assign bringup_dma_bid = {ID_WIDTH{1'b0}};
+  assign bringup_dma_bresp = 2'b0;
+  assign bringup_dma_bvalid = 1'b0;
+  assign bringup_dma_wready = 1'b0;
+
+  edge_core_edge32_top #(
+    .ADDR_WIDTH(ADDR_WIDTH),
+    .DATA_WIDTH(DATA_WIDTH),
+    .ID_WIDTH(ID_WIDTH),
+    .LEN_WIDTH(LEN_WIDTH)
+  ) core_top (
+    .forever_cpuclk(pll_core_cpuclk),
+    .cpurst_b(pad_cpu_rst_b),
+    .core_start(core_start),
+    .core_force_stop(core_force_stop),
+    .boot_pc(core_boot_pc),
+    .mem_region_base(edge_dtcm_base),
+    .mem_region_mask(edge_dtcm_mask),
+    .mem_region_enable(edge_dtcm_enable),
+    .dma_araddr(biu_pad_araddr),
+    .dma_arburst(biu_pad_arburst),
+    .dma_arcache(biu_pad_arcache),
+    .dma_arid(biu_pad_arid),
+    .dma_arlen(biu_pad_arlen),
+    .dma_arlock(biu_pad_arlock),
+    .dma_arprot(biu_pad_arprot),
+    .dma_arsize(biu_pad_arsize),
+    .dma_arvalid(biu_pad_arvalid),
+    .dma_arready(soc_pad_biu_arready),
+    .dma_rdata(soc_pad_biu_rdata),
+    .dma_rid(soc_pad_biu_rid),
+    .dma_rlast(soc_pad_biu_rlast),
+    .dma_rready(biu_pad_rready),
+    .dma_rresp(soc_pad_biu_rresp),
+    .dma_rvalid(soc_pad_biu_rvalid),
+    .dma_awaddr(biu_pad_awaddr),
+    .dma_awburst(biu_pad_awburst),
+    .dma_awcache(biu_pad_awcache),
+    .dma_awid(biu_pad_awid),
+    .dma_awlen(biu_pad_awlen),
+    .dma_awlock(biu_pad_awlock),
+    .dma_awprot(biu_pad_awprot),
+    .dma_awsize(biu_pad_awsize),
+    .dma_awvalid(biu_pad_awvalid),
+    .dma_awready(soc_pad_biu_awready),
+    .dma_bid(soc_pad_biu_bid),
+    .dma_bready(biu_pad_bready),
+    .dma_bresp(soc_pad_biu_bresp),
+    .dma_bvalid(soc_pad_biu_bvalid),
+    .dma_wdata(biu_pad_wdata),
+    .dma_wlast(biu_pad_wlast),
+    .dma_wready(soc_pad_biu_wready),
+    .dma_wstrb(biu_pad_wstrb),
+    .dma_wvalid(biu_pad_wvalid),
+    .halted(core_halted),
+    .illegal(core_illegal),
+    .debug_x31(core_debug_x31),
+    .putchar_valid(core_putchar_valid),
+    .putchar_char(core_putchar_char),
+    .cycle_count(),
+    .instret_count(),
+    .asic_power_enable(core_asic_power_enable),
+    .asic_power_ready(core_asic_power_enable),
+    .asic_ready(),
+    .tensor_busy(),
+    .actu_busy(),
+    .cmpu_busy(),
+    .accel_dma_busy(core_accel_dma_busy)
   );
 
   edge_axi_interconnect #(

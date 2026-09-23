@@ -53,10 +53,15 @@ done
 
 mkdir -p "${OUT_DIR}"
 target_flags=(
-    --target=riscv64-unknown-elf
-    -march=rv64imfd_zba
-    -mabi=lp64
+    --target=riscv32-unknown-elf
+    -march=rv32im_zba
+    -mabi=ilp32
     -mcmodel=medany
+)
+
+include_flags=(
+    -I"${REPO_ROOT}/cpp"
+    -I"${REPO_ROOT}/src/edge-32/include"
 )
 
 "${CLANG}" "${target_flags[@]}" \
@@ -66,7 +71,7 @@ target_flags=(
 "${CLANGXX}" "${target_flags[@]}" \
     -x c++ -std=c++17 -ffreestanding -fno-builtin \
     -fno-exceptions -fno-rtti -fno-pic -fno-pie -O2 \
-    -I"${REPO_ROOT}/cpp" \
+    "${include_flags[@]}" \
     -c "${SOURCE}" \
     -o "${OUT_DIR}/${NAME}.o"
 
