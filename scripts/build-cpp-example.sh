@@ -59,6 +59,12 @@ target_flags=(
     -mcmodel=medany
 )
 
+COMPILER_RT_BUILTINS="$(${CLANG} "${target_flags[@]}" -print-libgcc-file-name)"
+link_runtime=()
+if [[ -f "${COMPILER_RT_BUILTINS}" ]]; then
+    link_runtime=("${COMPILER_RT_BUILTINS}")
+fi
+
 include_flags=(
     -I"${REPO_ROOT}/cpp"
     -I"${REPO_ROOT}/src/edge-32/include"
@@ -80,7 +86,7 @@ include_flags=(
     -nostdlib -nostartfiles \
     -Wl,-T,"${REPO_ROOT}/cpp/baremetal/linker.ld" \
     -Wl,-Map,"${OUT_DIR}/${NAME}.map" \
-    "${OUT_DIR}/crt0.o" "${OUT_DIR}/${NAME}.o" \
+    "${OUT_DIR}/crt0.o" "${OUT_DIR}/${NAME}.o" "${link_runtime[@]}" \
     -o "${OUT_DIR}/${NAME}.elf"
 
 if [[ -x "${LLVM_OBJDUMP}" ]]; then

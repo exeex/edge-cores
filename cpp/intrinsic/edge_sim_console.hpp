@@ -11,6 +11,14 @@ namespace edge_sim_console_detail {
 using edge_size_t = __SIZE_TYPE__;
 using edge_ptrdiff_t = __PTRDIFF_TYPE__;
 
+#if defined(__riscv) && defined(__riscv_xlen) && __riscv_xlen == 32
+using edge_console_uint_t = uint32_t;
+using edge_console_int_t = int32_t;
+#else
+using edge_console_uint_t = uint64_t;
+using edge_console_int_t = int64_t;
+#endif
+
 struct Writer {
     int count;
 
@@ -36,31 +44,31 @@ enum class Length {
     z,
 };
 
-static inline uint64_t unsigned_arg(va_list *args, Length length)
+static inline edge_console_uint_t unsigned_arg(va_list *args, Length length)
 {
     switch (length) {
-    case Length::hh: return (unsigned char)va_arg(*args, unsigned);
-    case Length::h: return (unsigned short)va_arg(*args, unsigned);
-    case Length::l: return va_arg(*args, unsigned long);
-    case Length::ll: return va_arg(*args, unsigned long long);
-    case Length::z: return va_arg(*args, edge_size_t);
-    default: return va_arg(*args, unsigned);
+    case Length::hh: return (edge_console_uint_t)(unsigned char)va_arg(*args, unsigned);
+    case Length::h: return (edge_console_uint_t)(unsigned short)va_arg(*args, unsigned);
+    case Length::l: return (edge_console_uint_t)va_arg(*args, unsigned long);
+    case Length::ll: return (edge_console_uint_t)va_arg(*args, unsigned long long);
+    case Length::z: return (edge_console_uint_t)va_arg(*args, edge_size_t);
+    default: return (edge_console_uint_t)va_arg(*args, unsigned);
     }
 }
 
-static inline int64_t signed_arg(va_list *args, Length length)
+static inline edge_console_int_t signed_arg(va_list *args, Length length)
 {
     switch (length) {
-    case Length::hh: return (signed char)va_arg(*args, int);
-    case Length::h: return (short)va_arg(*args, int);
-    case Length::l: return va_arg(*args, long);
-    case Length::ll: return va_arg(*args, long long);
-    case Length::z: return (int64_t)va_arg(*args, edge_ptrdiff_t);
-    default: return va_arg(*args, int);
+    case Length::hh: return (edge_console_int_t)(signed char)va_arg(*args, int);
+    case Length::h: return (edge_console_int_t)(short)va_arg(*args, int);
+    case Length::l: return (edge_console_int_t)va_arg(*args, long);
+    case Length::ll: return (edge_console_int_t)va_arg(*args, long long);
+    case Length::z: return (edge_console_int_t)va_arg(*args, edge_ptrdiff_t);
+    default: return (edge_console_int_t)va_arg(*args, int);
     }
 }
 
-static inline unsigned encode_unsigned(char *end, uint64_t value,
+static inline unsigned encode_unsigned(char *end, edge_console_uint_t value,
                                        unsigned base, bool uppercase)
 {
     const char *alphabet = uppercase ? "0123456789ABCDEF"
@@ -76,20 +84,20 @@ static inline unsigned encode_unsigned(char *end, uint64_t value,
     return length;
 }
 
-static inline unsigned encode_decimal(char *end, uint64_t value)
+static inline unsigned encode_decimal(char *end, edge_console_uint_t value)
 {
     return encode_unsigned(end, value, 10u, false);
 }
 
-static inline uint64_t decimal_scale(unsigned digits)
+static inline edge_console_uint_t decimal_scale(unsigned digits)
 {
-    uint64_t scale = 1;
+    edge_console_uint_t scale = 1;
     while (digits-- != 0u)
         scale *= 10u;
     return scale;
 }
 
-static inline void emit_decimal_digits(Writer &writer, uint64_t value)
+static inline void emit_decimal_digits(Writer &writer, edge_console_uint_t value)
 {
     char digits[32];
     const unsigned count = encode_decimal(digits + sizeof(digits), value);
@@ -98,7 +106,8 @@ static inline void emit_decimal_digits(Writer &writer, uint64_t value)
         writer.put(begin[i]);
 }
 
-static inline void emit_zero_padded_decimal(Writer &writer, uint64_t value,
+static inline void emit_zero_padded_decimal(Writer &writer,
+                                            edge_console_uint_t value,
                                             unsigned width)
 {
     if (width == 0u)
@@ -113,7 +122,7 @@ static inline void emit_zero_padded_decimal(Writer &writer, uint64_t value,
         writer.put(begin[i]);
 }
 
-static inline void emit_number(Writer &writer, uint64_t magnitude,
+static inline void emit_number(Writer &writer, edge_console_uint_t magnitude,
                                bool negative, unsigned base, bool uppercase,
                                bool alternate, bool plus, bool space,
                                bool left, bool zero, int width, int precision,
@@ -188,6 +197,7 @@ static inline void emit_text(Writer &writer, const char *text,
         writer.repeat(' ', padding);
 }
 
+#if !defined(__riscv) || !defined(__riscv_xlen) || __riscv_xlen != 32
 __attribute__((always_inline)) static inline double
 normalize_vararg_double(double input)
 {
@@ -219,7 +229,9 @@ normalize_vararg_double(double input)
     return input;
 #endif
 }
+#endif
 
+#if !defined(__riscv) || !defined(__riscv_xlen) || __riscv_xlen != 32
 static inline void emit_fixed(Writer &writer, double input, bool uppercase,
                               bool alternate, bool plus, bool space,
                               bool left, bool zero, int width, int precision,
@@ -294,6 +306,7 @@ static inline void emit_fixed(Writer &writer, double input, bool uppercase,
     if (left)
         writer.repeat(' ', padding);
 }
+#endif
 
 } // namespace edge_sim_console_detail
 
@@ -401,10 +414,11 @@ static inline int edge_sim_vprintf(const char *format, va_list args)
         }
         case 'd':
         case 'i': {
-            const int64_t value = signed_arg(&ap, length);
+            const edge_console_int_t value = signed_arg(&ap, length);
             const bool negative = value < 0;
-            const uint64_t magnitude = negative
-                ? (uint64_t)(-(value + 1)) + 1u : (uint64_t)value;
+            const edge_console_uint_t magnitude = negative
+                ? (edge_console_uint_t)(-(value + 1)) + 1u
+                : (edge_console_uint_t)value;
             emit_number(writer, magnitude, negative, 10u, false, false,
                         plus, space, left, zero, width, precision,
                         precision_specified);
@@ -429,9 +443,14 @@ static inline int edge_sim_vprintf(const char *format, va_list args)
         }
         case 'f':
         case 'F':
+#if !defined(__riscv) || !defined(__riscv_xlen) || __riscv_xlen != 32
             emit_fixed(writer, va_arg(ap, double), conversion == 'F',
                        alternate, plus, space, left, zero, width, precision,
                        precision_specified);
+#else
+            (void)va_arg(ap, double);
+            emit_text(writer, "<float?>", false, plus, space, left, zero, width);
+#endif
             break;
         case 'e': case 'E': case 'g': case 'G':
             (void)va_arg(ap, double);

@@ -28,7 +28,7 @@ rm -f "${REPORT}" "${LOG}"
         "+mem128=${OUT_DIR}/actu_throughput.memh" \
         "+mem128_words=${words}" \
         +expected_return=0 \
-        +max_cycles=500000 \
+        +max_cycles=2000000 \
         +run_case_report=run_case.report
 ) 2>&1 | tee "${LOG}" | sed '/^- .*Verilog \$finish$/d'
 

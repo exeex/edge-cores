@@ -4,6 +4,7 @@
 #if defined(__riscv) && defined(__riscv_xlen) && __riscv_xlen == 32
 
 /* RV32 instruction encoding is owned by the public edge-32 submodule. */
+#include "edge_memory_map.hpp"
 #include "edge32_intrinsic.hpp"
 
 #else

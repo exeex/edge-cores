@@ -86,6 +86,7 @@ bool output_is(uint16_t expected)
 
 extern "C" int main(void)
 {
+    edge_asic_on();
     fill(0x0000u);
     (void)run_actu<kActuModeSigmoid>();
     const uintptr_t sigmoid_cycles = run_actu<kActuModeSigmoid>();
