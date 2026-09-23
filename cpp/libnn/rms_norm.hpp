@@ -229,6 +229,8 @@ __attribute__((always_inline)) inline void rms_norm_impl(
             // RMS vector as an explicit scale vector.
             edge_tensor_wld(eye_stage);
             for (size_t block = 0; block < blocks; ++block) {
+                if (block != 0u)
+                    edge_tensor_wld<EDGE_TENSOR_LOAD_OPT_REUSE>();
                 edge_tensor_sld(inv_stage);
                 edge_tensor_setin(&row_input[block * kRmsNormVectorElements]);
                 edge_tensor_setout(&square_stage[block * kRmsNormVectorElements]);
@@ -244,6 +246,8 @@ __attribute__((always_inline)) inline void rms_norm_impl(
             edge_tensor_wld(eye_stage);
             DType *weight_ptr = weight_dram ? weight_stage : weight.data;
             for (size_t block = 0; block < blocks; ++block) {
+                if (block != 0u)
+                    edge_tensor_wld<EDGE_TENSOR_LOAD_OPT_REUSE>();
                 edge_tensor_sld(&weight_ptr[block * kRmsNormVectorElements]);
                 edge_tensor_setin(&square_stage[block * kRmsNormVectorElements]);
                 edge_tensor_setout(&row_output[block * kRmsNormVectorElements]);
