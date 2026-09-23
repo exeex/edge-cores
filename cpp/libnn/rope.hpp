@@ -60,8 +60,8 @@ inline void rope(Tensor<DType> xq_out, Tensor<DType> xk_out,
             DType *table_src = &rope_table.data[
                 (start_pos * dim_blocks) * kTileElements];
             edge_dma_start_strided_circular(
-                table_src, scratch, tile_bytes, tile_bytes, tile_count,
-                0u, 1u, ring_tiles);
+                table_src, scratch, tile_bytes, tile_bytes, dim_blocks,
+                dim_blocks * tile_bytes, tokens, ring_tiles);
             edge_tensor_wld_circular();
         }
 
@@ -78,12 +78,10 @@ inline void rope(Tensor<DType> xq_out, Tensor<DType> xk_out,
                 edge_tensor_setin(&xq.data[data_base]);
                 edge_tensor_setout(&xq_out.data[data_base]);
                 edge_tensor_start<EDGE_TENSOR_START_OPT_NO_PSUM>();
-
                 edge_tensor_wld<EDGE_TENSOR_LOAD_OPT_REUSE>();
                 edge_tensor_setin(&xk.data[data_base]);
                 edge_tensor_setout(&xk_out.data[data_base]);
                 edge_tensor_start<EDGE_TENSOR_START_OPT_NO_PSUM>();
-
                 ++tile_index;
                 if (table_dram && tile_index < tile_count)
                     edge_tensor_wld_circular();
