@@ -19,8 +19,11 @@ inline void attention(Tensor<DType> y, Tensor<DType> xq, Tensor<DType> keys,
     malloc_tensor_dram(prob);
 
     matmul_transpose(score, xq, keys, head_count);
+    edge_sim_printf("NNC_PHASE attention_scores\n");
     softmax(prob, score, eye_weight, head_count);
+    edge_sim_printf("NNC_PHASE attention_softmax\n");
     matmul(y, prob, values, head_count);
+    edge_sim_printf("NNC_PHASE attention_values\n");
 
     free_tensor(prob);
     free_tensor(score);

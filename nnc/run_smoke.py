@@ -84,9 +84,9 @@ def build(args: argparse.Namespace, generated_dir: Path, build_dir: Path) -> Non
     objcopy = tool("LLVM_OBJCOPY", "llvm-objcopy")
     lld = tool("LLD", "ld.lld")
     target = [
-        "--target=riscv64-unknown-elf",
-        "-march=rv64imfd_zicsr_zfh",
-        "-mabi=lp64",
+        "--target=riscv32-unknown-elf",
+        "-march=rv32im_zba",
+        "-mabi=ilp32",
         "-mcmodel=medany",
     ]
     build_dir.mkdir(parents=True, exist_ok=True)
@@ -101,11 +101,12 @@ def build(args: argparse.Namespace, generated_dir: Path, build_dir: Path) -> Non
         "-Wall", "-Wextra", *profile,
         f"-DNNEDGE_OUTPUT_BASE=0x{args.output_base:x}u",
         f"-I{REPO_ROOT / 'cpp'}", f"-I{REPO_ROOT / 'cpp/intrinsic'}",
+        f"-I{REPO_ROOT / 'src/edge-32/include'}",
         f"-I{generated_dir}",
         "-c", str(args.main_file), "-o", str(build_dir / "main.o"),
     ], check=True)
     subprocess.run([
-        objcopy, "-I", "binary", "-O", "elf64-littleriscv", "-B", "riscv",
+        objcopy, "-I", "binary", "-O", "elf32-littleriscv", "-B", "riscv",
         "--rename-section", ".data=.nnedge_weights,alloc,load,readonly,data,contents",
         str(generated_dir / "weight.bin"), str(build_dir / "weights.o"),
     ], check=True)
@@ -114,7 +115,8 @@ def build(args: argparse.Namespace, generated_dir: Path, build_dir: Path) -> Non
         "-nostdlib", "-nostartfiles",
         f"-Wl,-T,{REPO_ROOT / 'cpp/baremetal/linker.ld'}", "-Wl,--gc-sections",
         str(build_dir / "crt0.o"), str(build_dir / "main.o"),
-        str(build_dir / "weights.o"), "-o", str(build_dir / "llama.elf"),
+        str(build_dir / "weights.o"),
+        "-o", str(build_dir / "llama.elf"),
     ], check=True)
     subprocess.run([
         sys.executable, str(REPO_ROOT / "tools/elf2mem128.py"),

@@ -29,14 +29,19 @@ __attribute__((always_inline)) inline void rms_norm_square_batch(
     // The diagonal WLD holds exact 1/cols powers of two. dot(W, x) therefore
     // produces x/cols while the scale stream supplies x, yielding x*x/cols
     // for the complete row in one descriptor.
-    edge_tensor_wld(square_mean_weight);
-    edge_tensor_sld_stream(input);
-    edge_tensor_setin(input);
-    edge_tensor_setout(square);
-    edge_tensor_setn(vector_count);
-    edge_tensor_start<EDGE_TENSOR_START_OPT_USE_SCALE |
-                      EDGE_TENSOR_START_OPT_SCALE_STREAM |
-                      EDGE_TENSOR_START_OPT_NO_PSUM>();
+    // Keep the scale vector explicit for RV32/e3enc.  The compact stream
+    // command is not yet reliable for this DTCM path, while one-vector
+    // launches use the same hardware multiply/scale datapath.
+    for (size_t vector = 0; vector < vector_count; ++vector) {
+        edge_tensor_wld(square_mean_weight);
+        edge_tensor_sld(&input[vector * kRmsNormVectorElements]);
+        edge_tensor_setin(&input[vector * kRmsNormVectorElements]);
+        edge_tensor_setout(&square[vector * kRmsNormVectorElements]);
+        edge_tensor_setn(1u);
+        edge_tensor_start<EDGE_TENSOR_START_OPT_USE_SCALE |
+                          EDGE_TENSOR_START_OPT_NO_PSUM>();
+    }
+    edge_tensor_sync();
     edge_tensor_sync();
 }
 
@@ -159,28 +164,34 @@ __attribute__((always_inline)) inline void rms_norm_impl(
     DType *output_stage = input_stage + input_stage_elements;
     const size_t output_stage_elements = OutputDram ? batch_capacity : 0u;
     DType *square_stage = output_stage + output_stage_elements;
-    DType *square_weight_stage = square_stage + batch_capacity;
+    DType *square_weight_stage = square_stage + cols;
     DType *reduce_stage = square_weight_stage + kRmsNormTileElements;
     DType *eye_stage = reduce_stage + kRmsNormTileElements;
     DType *mean_square_stage = eye_stage + kRmsNormTileElements;
-    DType *inv_stage =
-        mean_square_stage + batch_rows * kRmsNormVectorElements;
-    DType *weight_ring =
-        inv_stage + batch_rows * kRmsNormVectorElements;
+    DType *inv_stage = mean_square_stage + kRmsNormVectorElements;
+    DType *weight_stage = inv_stage + kRmsNormVectorElements;
 
-    const size_t fixed_elements = static_cast<size_t>(weight_ring - scratch);
+    const size_t fixed_elements = static_cast<size_t>(weight_stage - scratch);
     const size_t scratch_elements = kDtcmOpScratchBytes / sizeof(DType);
-    if (fixed_elements + kRmsNormTileElements > scratch_elements) {
+    if (fixed_elements > scratch_elements) {
         alloc_failed() = true;
         return;
     }
+
+    const bool weight_dram = !is_dtcm_addr(weight.data);
 
     edge_dma_start(square_weight.data, square_weight_stage, tile_bytes);
     edge_dma_sync();
     edge_dma_start(reduce_weight.data, reduce_stage, tile_bytes);
     edge_dma_sync();
+
     edge_dma_start(eye.data, eye_stage, tile_bytes);
     edge_dma_sync();
+    if (weight_dram) {
+        edge_dcache_clean_range(weight.data, cols * sizeof(DType));
+        edge_dma_start(weight.data, weight_stage, cols * sizeof(DType));
+        edge_dma_sync();
+    }
 
     edge_tensor_setcsr<::bfloat16_t, ::bfloat16_t>();
 
@@ -202,19 +213,46 @@ __attribute__((always_inline)) inline void rms_norm_impl(
         if constexpr (OutputDram)
             batch_output = output_stage;
 
-        rms_norm_square_batch(square_stage, batch_input, square_weight_stage,
-                              batch_elements / kRmsNormVectorElements);
-        rms_norm_reduce_mean_square_batch(
-            mean_square_stage, square_stage, reduce_stage, batch_count, cols,
-            blocks);
-        rms_norm_inverse_rms_batch(
-            inv_stage, mean_square_stage, batch_count, epsilon);
-        rms_norm_normalize_batch(
-            square_stage, batch_input, inv_stage, eye_stage, batch_count,
-            cols, blocks);
-        rms_norm_apply_weight_batch(
-            batch_output, square_stage, weight, eye_stage, weight_ring,
-            batch_count, cols, blocks);
+        for (size_t row = 0; row < batch_count; ++row) {
+            DType *row_input = &batch_input[row * cols];
+            DType *row_output = &batch_output[row * cols];
+
+            rms_norm_square_batch(square_stage, row_input, square_weight_stage,
+                                  blocks);
+            rms_norm_reduce_mean_square_batch(
+                mean_square_stage, square_stage, reduce_stage, 1u, cols,
+                blocks);
+            rms_norm_inverse_rms_batch(inv_stage, mean_square_stage, 1u,
+                                       epsilon);
+
+            // Normalize with the identity WLD and the ACTU-produced inverse
+            // RMS vector as an explicit scale vector.
+            edge_tensor_wld(eye_stage);
+            for (size_t block = 0; block < blocks; ++block) {
+                edge_tensor_sld(inv_stage);
+                edge_tensor_setin(&row_input[block * kRmsNormVectorElements]);
+                edge_tensor_setout(&square_stage[block * kRmsNormVectorElements]);
+                edge_tensor_setn(1u);
+                edge_tensor_start<EDGE_TENSOR_START_OPT_USE_SCALE |
+                                  EDGE_TENSOR_START_OPT_NO_PSUM>();
+            }
+            edge_tensor_sync();
+
+            // Apply the raw per-element weight with another identity WLD.
+            // Use explicit SLDs here as well; the compact stream form is the
+            // source of the RV32 DTCM failure seen in the batched path.
+            edge_tensor_wld(eye_stage);
+            DType *weight_ptr = weight_dram ? weight_stage : weight.data;
+            for (size_t block = 0; block < blocks; ++block) {
+                edge_tensor_sld(&weight_ptr[block * kRmsNormVectorElements]);
+                edge_tensor_setin(&square_stage[block * kRmsNormVectorElements]);
+                edge_tensor_setout(&row_output[block * kRmsNormVectorElements]);
+                edge_tensor_setn(1u);
+                edge_tensor_start<EDGE_TENSOR_START_OPT_USE_SCALE |
+                                  EDGE_TENSOR_START_OPT_NO_PSUM>();
+            }
+            edge_tensor_sync();
+        }
 
         if constexpr (OutputDram) {
             DType *output_dst = &y.data[batch_base * cols];

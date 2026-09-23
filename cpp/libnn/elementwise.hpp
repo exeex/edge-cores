@@ -80,12 +80,15 @@ template <typename DType, typename Alpha>
 inline void add(Tensor<DType> y, Tensor<DType> lhs, Tensor<DType> rhs,
                 Tensor<DType> eye, Alpha alpha)
 {
-    const size_t n = numel(y);
-    const float scale = static_cast<float>(alpha);
-    if (scale != 1.0f) {
-        for (size_t i = 0; i < n; ++i) {
-            y.data[i] = DType::from_float(lhs.data[i].to_float() + rhs.data[i].to_float() * scale);
-        }
+    union {
+        float f32;
+        uint32_t bits;
+    } scale = {static_cast<float>(alpha)};
+    if (scale.bits != 0x3f800000u) {
+        // RV32 Llama execution keeps this operator on the tensor path.  A
+        // non-unit scalar would otherwise pull in a hosted soft-float loop;
+        // add a dedicated tensor scalar mode before accepting such callers.
+        alloc_failed() = true;
         return;
     }
     const bool lhs_dram = !is_dtcm_addr(lhs.data);
