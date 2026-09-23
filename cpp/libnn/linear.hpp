@@ -69,13 +69,23 @@ inline void linear_impl(Tensor<bfloat16_t> y, Tensor<bfloat16_t> x,
         edge_tensor_setn(1u);
         const size_t weight_tile_count = out_blocks * k_blocks;
         if (weight_dram) {
+            // RV32 DMA XY counts are encoded in imm8.  Keep every axis
+            // within the hardware limit while preserving the linear tile
+            // order for large projections such as 4096-wide Q heads.
+            size_t dma_x_count = weight_tile_count < 255u
+                ? weight_tile_count
+                : 255u;
+            while (weight_tile_count % dma_x_count != 0u)
+                --dma_x_count;
+            const size_t dma_y_count = weight_tile_count / dma_x_count;
             const size_t ring_tiles =
                 weight_tile_count < weight_ring_capacity
                     ? weight_tile_count
                     : weight_ring_capacity;
             edge_dma_start_strided_circular(
                 weight.data, w_stage, kWeightTileBytes, kWeightTileBytes,
-                weight_tile_count, 0u, 1u, ring_tiles);
+                dma_x_count, dma_x_count * kWeightTileBytes, dma_y_count,
+                kWeightTileBytes, ring_tiles);
             edge_tensor_wld_circular();
         }
 
