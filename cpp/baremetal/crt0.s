@@ -25,6 +25,8 @@ _start:
     j       1b
 
 2:
+    /* edge.asic.power(on): release the DTCM/accelerator access gate before main. */
+    .word   0x1200103f
     call    main
 
     mv      s0, a0

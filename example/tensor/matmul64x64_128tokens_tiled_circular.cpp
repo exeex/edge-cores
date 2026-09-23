@@ -109,8 +109,11 @@ extern "C" int main(void)
 
     uintptr_t cycle_start = edge_get_cycle();
 
-    edge_dma_start_strided_circular((const void *)kMm64WIdentity.data,
-                                    (void *)dtcm->w_ring,
+    edge_dma_start_strided_circular(
+                                    static_cast<addr_t>(reinterpret_cast<uintptr_t>(
+                                        kMm64WIdentity.data)),
+                                    static_cast<addr_t>(reinterpret_cast<uintptr_t>(
+                                        dtcm->w_ring)),
                                     MM64_W_TILE_BYTES,
                                     MM64_W_STRIDE_BYTES,
                                     MM64_BLOCKS,
@@ -127,11 +130,12 @@ extern "C" int main(void)
                 ? &dtcm->zero[out_blk * MM64_TOKENS * MM64_TILE]
                 : &dtcm->y[out_blk * MM64_TOKENS * MM64_TILE];
 
-            edge_tensor_setin((const void *)&dtcm->x[
-                k_blk * MM64_TOKENS * MM64_TILE]);
-            edge_tensor_setout((void *)&dtcm->y[
-                out_blk * MM64_TOKENS * MM64_TILE]);
-            edge_tensor_setpsum((const void *)psum_ptr);
+            edge_tensor_setin(static_cast<addr_t>(reinterpret_cast<uintptr_t>(
+                &dtcm->x[k_blk * MM64_TOKENS * MM64_TILE])));
+            edge_tensor_setout(static_cast<addr_t>(reinterpret_cast<uintptr_t>(
+                &dtcm->y[out_blk * MM64_TOKENS * MM64_TILE])));
+            edge_tensor_setpsum(static_cast<addr_t>(reinterpret_cast<uintptr_t>(
+                psum_ptr)));
             edge_tensor_start();
             if (tile_id + 1u < (MM64_BLOCKS * MM64_BLOCKS))
                 edge_tensor_wld_t_circular();
@@ -152,7 +156,8 @@ extern "C" int main(void)
            MM64_BLOCKS * MM64_BLOCKS,
            MM64_SETN);
 
-    edge_dma_start((const void *)dtcm->y, (void *)MM64_Y_DRAM_BASE,
+    edge_dma_start(static_cast<addr_t>(reinterpret_cast<uintptr_t>(dtcm->y)),
+                   static_cast<addr_t>(MM64_Y_DRAM_BASE),
                    MM64_STREAM_ELEMS * sizeof(bf16_t));
     edge_dma_sync();
 
