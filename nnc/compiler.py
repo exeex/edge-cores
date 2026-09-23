@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lower semantic NNC graph nodes into forward.hpp/init.hpp/weight.bin.
+"""Lower semantic NNC graph nodes into forward.hpp/init.hpp/weight.bin/input.bin.
 
 Tensor sources:
 - static: forward inputs, forward outputs, and weights
@@ -485,6 +485,41 @@ class InitRenderer:
     def __init__(self, abi: ForwardABI, weights: WeightStore) -> None:
         self.abi = abi
         self.weights = weights
+        self.input_offsets, self.input_data = self.layout_inputs()
+        self.output_offsets, self.output_bytes = self.layout_outputs()
+
+    @staticmethod
+    def align(value: int) -> int:
+        return (value + 63) & ~63
+
+    def layout_inputs(self) -> tuple[dict[str, int], bytes]:
+        offsets: dict[str, int] = {}
+        data = bytearray()
+        for value in self.abi.inputs:
+            if value.kind != "tensor":
+                continue
+            data.extend(bytes(self.align(len(data)) - len(data)))
+            offsets[value.name] = len(data)
+            bits = value.init_bits or (0,) * self.numel(value.shape)
+            if len(bits) != self.numel(value.shape):
+                raise SystemExit(f"input tensor {value.name} has mismatched shape and data")
+            data.extend(struct.pack(f"<{len(bits)}H", *bits))
+        return offsets, bytes(data)
+
+    def layout_outputs(self) -> tuple[dict[str, int], int]:
+        offsets: dict[str, int] = {}
+        cursor = 0
+        for value in self.abi.outputs:
+            if value.kind != "tensor":
+                continue
+            cursor = self.align(cursor)
+            offsets[value.name] = cursor
+            cursor += self.numel(value.shape) * 2
+        return offsets, self.align(cursor)
+
+    def write_input_bin(self, path: Path) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(self.input_data)
 
     def render(self) -> str:
         lines = [
@@ -496,6 +531,8 @@ class InitRenderer:
             "",
             "using dtype = nnedge::bfloat16_t;",
             "using nnedge::Tensor;",
+            'static_assert(sizeof(dtype) == 2, "NNC IO payloads require BF16");',
+            'static_assert(nnedge::kArenaAlign == 64, "NNC IO offsets require 64-byte alignment");',
             "",
             f"constexpr nnedge::size_t kWeightBytes = {self.weights.cursor};",
             "",
@@ -511,9 +548,14 @@ class InitRenderer:
             "",
             "} // namespace mio",
             "",
+            f"alignas(nnedge::kArenaAlign) inline unsigned char output_storage[{max(self.output_bytes, 1)}]",
+            '    __attribute__((used, section(".nnedge_outputs")));',
+            "",
             *self.weights.render_weight_init(),
             "",
             'extern "C" const unsigned char weight_begin[];',
+            'extern "C" const unsigned char input_begin[];',
+            'extern "C" unsigned char output_begin[];',
             "",
             "inline void init()",
             "{",
@@ -533,28 +575,24 @@ class InitRenderer:
     def render_mio_decl(self, value: AbiValue) -> list[str]:
         if value.kind == "size_t":
             return [f"inline nnedge::size_t {value.name};"]
-        return [
-            f"alignas(nnedge::kArenaAlign) inline dtype {value.name}_storage["
-            f"{self.numel(value.shape)}];",
-            f"inline Tensor<dtype> {value.name};",
-        ]
+        return [f"inline Tensor<dtype> {value.name};"]
 
     def render_mio_init(self, value: AbiValue) -> list[str]:
         if value.kind == "size_t":
             return [f"    mio::{value.name} = {value.init_size};"]
-        lines = [
-            f"    mio::{value.name} = Tensor<dtype>({self.shape_literal(value.shape)}, "
-            f"mio::{value.name}_storage);"
-        ]
-        if value.init_bits:
-            for index, bits in enumerate(value.init_bits):
-                lines.append(f"    mio::{value.name}_storage[{index}] = dtype::from_bits(0x{bits:04x});")
+        if value.name in self.input_offsets:
+            offset = self.input_offsets[value.name]
+            address = f"const_cast<unsigned char *>(input_begin) + {offset}"
         else:
-            lines.append(f"    nnedge::zero(mio::{value.name});")
-        lines.append(
-            f"    edge_dcache_clean_range(mio::{value.name}.data, "
-            f"nnedge::numel(mio::{value.name}) * sizeof(dtype));"
-        )
+            offset = self.output_offsets[value.name]
+            address = f"output_begin + {offset}"
+        lines = [f"    mio::{value.name} = Tensor<dtype>({self.shape_literal(value.shape)}, "
+                 f"reinterpret_cast<dtype *>({address}));"]
+        if value.name in self.input_offsets:
+            lines.append(
+                f"    edge_dcache_clean_range(mio::{value.name}.data, "
+                f"nnedge::numel(mio::{value.name}) * sizeof(dtype));"
+            )
         return lines
 
     @staticmethod
@@ -1075,7 +1113,9 @@ def main() -> None:
         ForwardRenderer(program, abi, weight_store).render(),
         encoding="utf-8",
     )
-    (args.out_dir / "init.hpp").write_text(InitRenderer(abi, weight_store).render(), encoding="utf-8")
+    init = InitRenderer(abi, weight_store)
+    (args.out_dir / "init.hpp").write_text(init.render(), encoding="utf-8")
+    init.write_input_bin(args.out_dir / "input.bin")
     weight_store.write_weight_bin(args.out_dir / "weight.bin")
 
 

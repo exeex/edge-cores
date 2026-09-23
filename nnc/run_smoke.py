@@ -63,9 +63,9 @@ def generate(model_file: Path, generated_dir: Path) -> tuple[int, ...]:
     (generated_dir / "forward.hpp").write_text(
         compiler.ForwardRenderer(program, abi, weights).render(), encoding="utf-8"
     )
-    (generated_dir / "init.hpp").write_text(
-        compiler.InitRenderer(abi, weights).render(), encoding="utf-8"
-    )
+    init = compiler.InitRenderer(abi, weights)
+    (generated_dir / "init.hpp").write_text(init.render(), encoding="utf-8")
+    init.write_input_bin(generated_dir / "input.bin")
     weights.write_weight_bin(generated_dir / "weight.bin")
 
     with torch.no_grad():
@@ -99,7 +99,6 @@ def build(args: argparse.Namespace, generated_dir: Path, build_dir: Path) -> Non
         clangxx, *target, "-std=c++17", "-ffreestanding", "-fno-builtin",
         "-fno-exceptions", "-fno-rtti", "-fno-pic", "-fno-pie", "-O2",
         "-Wall", "-Wextra", *profile,
-        f"-DNNEDGE_OUTPUT_BASE=0x{args.output_base:x}u",
         f"-I{REPO_ROOT / 'cpp'}", f"-I{REPO_ROOT / 'cpp/intrinsic'}",
         f"-I{REPO_ROOT / 'src/edge-32/include'}",
         f"-I{generated_dir}",
@@ -111,11 +110,17 @@ def build(args: argparse.Namespace, generated_dir: Path, build_dir: Path) -> Non
         str(generated_dir / "weight.bin"), str(build_dir / "weights.o"),
     ], check=True)
     subprocess.run([
+        objcopy, "-I", "binary", "-O", "elf32-littleriscv", "-B", "riscv",
+        "--rename-section", ".data=.nnedge_inputs,alloc,load,readonly,data,contents",
+        str(generated_dir / "input.bin"), str(build_dir / "inputs.o"),
+    ], check=True)
+    subprocess.run([
         clang, *target, "-fuse-ld=lld", f"-B{Path(lld).parent}",
         "-nostdlib", "-nostartfiles",
         f"-Wl,-T,{REPO_ROOT / 'cpp/baremetal/linker.ld'}", "-Wl,--gc-sections",
+        f"-Wl,--defsym=__nnedge_output_base=0x{args.output_base:x}",
         str(build_dir / "crt0.o"), str(build_dir / "main.o"),
-        str(build_dir / "weights.o"),
+        str(build_dir / "weights.o"), str(build_dir / "inputs.o"),
         "-o", str(build_dir / "llama.elf"),
     ], check=True)
     subprocess.run([
@@ -244,7 +249,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sim-exe")
     parser.add_argument("--skip-verilator-build", action="store_true",
                         help="reuse an already-built simulator (used by the suite harness)")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.output_base % 64:
+        parser.error("--output-base must be 64-byte aligned")
+    return args
 
 
 def main() -> None:

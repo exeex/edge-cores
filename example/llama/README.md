@@ -2,7 +2,7 @@
 
 This example exports the tiny Llama 3 transformer block in
 `model/llama3_source.py`, lowers it through `nnc/compiler.py`,
-links the generated weights into a bare-metal RISC-V image, and checks the
+links the generated weights and example inputs into a bare-metal RISC-V image, and checks the
 encrypted-core Verilator output against PyTorch.
 
 ```sh
@@ -42,3 +42,9 @@ keeps one log per model in the same directory.
 
 Generated headers, weights, binaries, and logs are written below
 `example/llama/build/` and are not source files.
+
+The generated `weight.bin` and `input.bin` are linked into `.nnedge_weights`
+and `.nnedge_inputs`. `init.hpp` binds tensors using each section's start
+address plus the compiler's offset. Output storage lives in the ELF's
+`.nnedge_outputs` section at the runner's `--output-base` address (default
+`0x100000`).

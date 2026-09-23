@@ -226,24 +226,28 @@ class DramPreferenceTest(unittest.TestCase):
 
 
 class InitRendererTest(unittest.TestCase):
-    def test_tensor_storage_is_dma_beat_aligned(self) -> None:
+    def test_io_payloads_use_aligned_section_offsets(self) -> None:
         abi = compiler.ForwardABI(
-            (compiler.AbiValue("x", "tensor", (3,)),),
-            (compiler.AbiValue("y", "tensor", (3,)),),
+            (
+                compiler.AbiValue("x", "tensor", (3,), (0x3f80, 0xbf80, 0)),
+                compiler.AbiValue("x2", "tensor", (2,), (0x4000, 0x4040)),
+            ),
+            (
+                compiler.AbiValue("y", "tensor", (3,)),
+                compiler.AbiValue("y2", "tensor", (2,)),
+            ),
         )
+        init = compiler.InitRenderer(abi, compiler.WeightStore({}))
+        rendered = init.render()
 
-        rendered = compiler.InitRenderer(
-            abi, compiler.WeightStore({})
-        ).render()
-
-        self.assertIn(
-            "alignas(nnedge::kArenaAlign) inline dtype x_storage[3];",
-            rendered,
-        )
-        self.assertIn(
-            "alignas(nnedge::kArenaAlign) inline dtype y_storage[3];",
-            rendered,
-        )
+        self.assertEqual(init.input_offsets, {"x": 0, "x2": 64})
+        self.assertEqual(init.output_offsets, {"y": 0, "y2": 64})
+        self.assertEqual(struct.unpack_from("<3H", init.input_data), (0x3f80, 0xbf80, 0))
+        self.assertEqual(struct.unpack_from("<2H", init.input_data, 64), (0x4000, 0x4040))
+        self.assertIn("input_begin) + 64", rendered)
+        self.assertIn("output_begin + 64", rendered)
+        self.assertIn('section(".nnedge_outputs")', rendered)
+        self.assertNotIn("dtype::from_bits", rendered)
 
 
 if __name__ == "__main__":
