@@ -10,9 +10,10 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 case "${PROFILE}" in
   edge32@e3) TOP=edge_core_edge32_top; FLIST=src/edge-e3enc/edge_e3enc_mixed.fl ;;
+  edge-32) TOP=edge_32_cached_core; FLIST=src/edge-32/filelists/edge_32.fl ;;
   edge-rv) TOP=edge_rv_top; FLIST=synth/filelists/edge_rv.fl ;;
-  edge-rv-lite) TOP=edge_rv_lite_cached_core; FLIST=src/edge-rv-lite/filelists/edge_rv_lite.fl ;;
-  *) echo "Usage: synth/run_profile.sh [--check] {edge32@e3|edge-rv|edge-rv-lite} [target]" >&2; exit 1 ;;
+  edge-rv-lite) TOP=edge_rv_lite_cached_core; FLIST="${EDGE_RV_LITE_ROOT:-${ROOT_DIR}/src/edge-rv-lite}/filelists/edge_rv_lite.fl" ;;
+  *) echo "Usage: synth/run_profile.sh [--check] {edge32@e3|edge-32|edge-rv|edge-rv-lite} [target]" >&2; exit 1 ;;
 esac
 
 export STAREDGE_YOSYS_VARIANT="${STAREDGE_YOSYS_VARIANT:-${PROFILE//@/-}}"
