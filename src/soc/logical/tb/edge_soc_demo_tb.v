@@ -30,6 +30,9 @@ module edge_soc_demo_tb;
   integer tensor_engine_out_not_owned_count;
   integer tensor_engine_i_output_conflict_count;
   integer tensor_engine_psum_output_conflict_count;
+  integer tensor_engine_i_output_stall_count;
+  integer tensor_engine_psum_output_stall_count;
+  integer tensor_engine_psum_tail_wait_count;
   integer tensor_engine_output_write_count;
   integer tensor_engine_start_count;
   integer tensor_engine_start_run_sum;
@@ -84,6 +87,9 @@ module edge_soc_demo_tb;
       $fdisplay(report_fd, "TENSOR_ENGINE_OUT_NOT_OWNED_COUNT=%0d", tensor_engine_out_not_owned_count);
       $fdisplay(report_fd, "TENSOR_ENGINE_I_OUTPUT_CONFLICT_COUNT=%0d", tensor_engine_i_output_conflict_count);
       $fdisplay(report_fd, "TENSOR_ENGINE_PSUM_OUTPUT_CONFLICT_COUNT=%0d", tensor_engine_psum_output_conflict_count);
+      $fdisplay(report_fd, "TENSOR_ENGINE_I_OUTPUT_STALL_COUNT=%0d", tensor_engine_i_output_stall_count);
+      $fdisplay(report_fd, "TENSOR_ENGINE_PSUM_OUTPUT_STALL_COUNT=%0d", tensor_engine_psum_output_stall_count);
+      $fdisplay(report_fd, "TENSOR_ENGINE_PSUM_TAIL_WAIT_COUNT=%0d", tensor_engine_psum_tail_wait_count);
       $fdisplay(report_fd, "TENSOR_ENGINE_OUTPUT_WRITE_COUNT=%0d", tensor_engine_output_write_count);
       $fdisplay(report_fd, "TENSOR_ENGINE_START_COUNT=%0d", tensor_engine_start_count);
       $fdisplay(report_fd, "TENSOR_ENGINE_START_RUN_SUM=%0d", tensor_engine_start_run_sum);
@@ -193,6 +199,9 @@ module edge_soc_demo_tb;
     tensor_engine_out_not_owned_count = 0;
     tensor_engine_i_output_conflict_count = 0;
     tensor_engine_psum_output_conflict_count = 0;
+    tensor_engine_i_output_stall_count = 0;
+    tensor_engine_psum_output_stall_count = 0;
+    tensor_engine_psum_tail_wait_count = 0;
     tensor_engine_output_write_count = 0;
     tensor_engine_start_count = 0;
     tensor_engine_start_run_sum = 0;
@@ -251,6 +260,37 @@ module edge_soc_demo_tb;
           dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
               .x_edge_tensor_unit_bank16.x_tensor_engine.psum_read_conflicts_output)
         tensor_engine_psum_output_conflict_count = tensor_engine_psum_output_conflict_count + 1;
+      // The conflict counters above compare addresses even when the read is
+      // not a candidate. Count actual arbitration stalls separately.
+      if (dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.read_candidate &&
+          dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.output_candidate &&
+          dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.i_output_conflict &&
+          !dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.read_fire)
+        tensor_engine_i_output_stall_count = tensor_engine_i_output_stall_count + 1;
+      if (dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.psum_candidate &&
+          dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.output_write_fire &&
+          dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.psum_output_conflict &&
+          !dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.psum_read_fire)
+        tensor_engine_psum_output_stall_count = tensor_engine_psum_output_stall_count + 1;
+      if (dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.compute_busy_q &&
+          dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.input_consume_count_q ==
+          dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.target_count_q &&
+          dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.psum_issue_count_q !=
+          dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+              .x_edge_tensor_unit_bank16.x_tensor_engine.psum_target_count)
+        tensor_engine_psum_tail_wait_count = tensor_engine_psum_tail_wait_count + 1;
       if (dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
               .x_edge_tensor_unit_bank16.x_tensor_engine.output_write_fire)
         tensor_engine_output_write_count = tensor_engine_output_write_count + 1;

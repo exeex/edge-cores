@@ -21,7 +21,7 @@ from the critical path and makes zero-day support for newly released Hugging
 Face models practical.
 
 The simpler toolchain does not come at the expense of accelerator utilization.
-The maintained [`example/tensor`](example/tensor/README.md) reaches **92.93%
+The maintained [`example/tensor`](example/tensor/README.md) reaches **93.59%
 effective MAC utilization** on a 64x64x128 BF16 matmul, including packed weight
 DMA, circular weight loads, Tensor execution, and synchronization.
 
@@ -285,7 +285,7 @@ circular weight loads:
 
 | Ideal MAC cycles | Measured `rdcycle` interval | Effective MAC utilization |
 | ---: | ---: | ---: |
-| 8,192 | 8,815 | **92.93%** |
+| 8,192 | 8,753 | **93.59%** |
 
 Effective MAC utilization is calculated as `ideal MAC cycles / cycle_delta`.
 The measured RTL interval starts before the packed weight DMA and ends
