@@ -369,6 +369,17 @@ def rewrite(text: str, symbols: dict[str, str], keep_comments: bool) -> str:
     return re.sub(r"[ \t]+(?=\r?$)", "", "".join(pieces), flags=re.MULTILINE)
 
 
+def enable_edge32_fpu(text: str) -> str:
+    """Keep scalar low-precision instructions enabled in the released RV32 core."""
+    disabled = ".ENABLE_DTCM_PORT(1),.EDGE_ASIC_ID(EDGE_ASIC_ID)"
+    enabled = ".ENABLE_DTCM_PORT(1),.ENABLE_FPU(1),.EDGE_ASIC_ID(EDGE_ASIC_ID)"
+    if text.count(enabled) == 1 and disabled not in text:
+        return text
+    if text.count(disabled) != 1:
+        raise ValueError("expected one edge32_axi_core FPU parameter insertion point")
+    return text.replace(disabled, enabled)
+
+
 def validate_mixed(
     verilator: str, top: str, mixed_filelist: Path, include_dirs: list[Path], temp: Path
 ) -> int:
@@ -530,6 +541,8 @@ def main() -> int:
                 stream.write("\n")
                 stream.write(rewrite(texts[path], symbols, args.keep_comments))
                 stream.write("\n")
+        if args.top == "edge_core_edge32_top":
+            combined.write_text(enable_edge32_fpu(combined.read_text()))
 
         sram_combined = stage / f"{args.artifact_stem}_sram.v"
         with sram_combined.open("w") as stream:

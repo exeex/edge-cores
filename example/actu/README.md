@@ -1,7 +1,7 @@
 # ACTU throughput example
 
 This bare-metal example measures 4,096-element sigmoid, SiLU, tanh, and
-three-pass softmax pipelines on the public encrypted edge-e3 core. Each kernel
+three-pass softmax pipelines on the public `edge-e3enc` simulator. Each kernel
 runs once to warm the instruction path, then a second time at the same address;
 only the second `start`-through-`sync` interval is reported. Input preparation
 and BF16 result validation are outside the timing window.

@@ -25,14 +25,14 @@ The maintained [`example/tensor`](example/tensor/README.md) reaches **94.72%
 effective MAC utilization** on a 64x64x128 BF16 matmul, including packed weight
 DMA, circular weight loads, Tensor execution, and synchronization.
 
-## Run Llama 3 and Qwen 3.6 on edge-rv@e3 ASIC RTL
+## Run Llama 3 and Qwen 3.6 on edge-e3enc ASIC RTL
 
 The current public flow demonstrates a **single Llama 3 transformer block** and
 a **reduced single Qwen 3.6 full-attention decoder layer** running on the
-`edge-rv@e3` ASIC RTL through Verilator. `edge-rv@e3` combines the open
-`edge-rv` control plane with e3, a deliberately tiny 8x8 BF16 Tensor ASIC with
-128 KB of DTCM. This MVP demonstrates the complete PyTorch-to-ASIC path with
-compact single-layer workloads.
+`edge-e3enc` ASIC RTL through Verilator. The simulator combines the encrypted
+e3 core, public Edge32 RTL, and SRAM boundary models from `edge-e3enc`. The
+8x8 BF16 Tensor ASIC has 128 KB of DTCM. This MVP demonstrates the complete
+PyTorch-to-ASIC path with compact single-layer workloads.
 
 Both examples start as small PyTorch modules, compile to bare-metal C++,
 execute on the RTL, and compare their BF16 outputs with PyTorch.
@@ -104,13 +104,13 @@ nnedge::op::silu(silu, x);
 ```
 
 The generated headers are compiled with the shared C++ runtime into a
-freestanding RV64 ELF. There is no host-side PyTorch dependency in the target
+freestanding RV32 ELF. There is no host-side PyTorch dependency in the target
 program.
 
 ### 3. Run it on the Verilated RTL
 
-After the initial setup, one command generates the code, builds the RV64 image,
-runs it on the encrypted edge-e3 Verilator model, and compares the BF16 output
+After the initial setup, one command generates the code, builds the RV32 image,
+runs it on the `edge-e3enc` Verilator model, and compares the BF16 output
 against PyTorch:
 
 ```sh
@@ -133,14 +133,18 @@ PyTorch model
     -> torch.export
     -> NNC graph lowering
     -> generated bare-metal C++
-    -> RV64 ELF
-    -> Verilated edge-e3 RTL
+    -> RV32 ELF
+    -> Verilated edge-e3enc RTL
     -> BF16 comparison with PyTorch
 ```
 
 ## Choose Your Path
 
-- **Run edge-e3:** build the encrypted Verilator model and execute the hello,
+The maintained Edge example run scripts use `scripts/build-verilator.sh`, which
+builds the `edge-e3enc` simulator. CoreMark also includes a separate C906 run
+script for comparison.
+
+- **Run edge-e3enc:** build the encrypted Verilator model and execute the hello,
   tensor, and PyTorch-to-NNC examples.
 - **Integrate your own accelerator:** combine your RTL with `edge-rv` or
   `edge-rv-lite`, then define its instruction, memory, and verification paths.
@@ -271,7 +275,9 @@ The tensor example is the smallest end-to-end demonstration of these patterns.
 
 ## Performance Snapshot
 
-All results below are RTL simulation checkpoints, not silicon measurements.
+All results below are historical RTL simulation checkpoints, not silicon
+measurements. Run the maintained examples for measurements on the current
+`edge-e3enc` release.
 
 ### Scalar
 
@@ -327,8 +333,10 @@ measurement details.
 | Integrate an accelerator | [`integrate-your-design`](.codex/skills/integrate-your-design/SKILL.md) |
 | Write high-performance software | **[Edge intrinsic user manual](cpp/intrinsic/README.md)** |
 | Run the hello smoke | [Hello example](example/hello/README.md) |
+| Debug FP4 scalar conversion | [FP4 debug example](example/fp4_debug/README.md) |
 | Debug FP8/BF16 and floating `printf` | [FP8/BF16 debug example](example/fp8_bf16_debug/README.md) |
 | Run tensor matmul | [Tensor example](example/tensor/README.md) |
+| Compare scalar CoreMark cycles | [CoreMark example](example/coremark/README.md) |
 | Run PyTorch-to-NNC | [Llama example](example/llama/README.md) |
 | Run synthesis profiles | [Synthesis guide](synth/README.md) |
 | Understand the SoC harness | [SoC guide](src/soc/README.md) |

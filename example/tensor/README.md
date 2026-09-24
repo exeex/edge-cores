@@ -1,10 +1,8 @@
 # Tensor example
 
 This directory contains the `64x64 x 128-token` tiled circular matmul demo.
-The simulator always builds against `src/edge-e3enc/edge_e3enc.v`; private
-source RTL is not part of the core compilation path. The SRAM filelist still
-uses the implementation models from the optional private `src/edge-e3`
-submodule.
+The simulator builds against `src/edge-e3enc/edge_e3enc.v`, the public Edge32
+RTL in `src/edge-32`, and `src/edge-e3enc/edge_e3enc_sram.v`.
 
 Shared freestanding C++ headers live under `cpp/`; intrinsics and the simulator
 console `printf` implementation live under `cpp/intrinsic/`.

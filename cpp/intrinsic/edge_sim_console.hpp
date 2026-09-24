@@ -306,6 +306,113 @@ static inline void emit_fixed(Writer &writer, double input, bool uppercase,
     if (left)
         writer.repeat(' ', padding);
 }
+#else
+static inline float rv32_float_from_double_bits(uint64_t raw)
+{
+    const uint32_t sign = (uint32_t)(raw >> 32) & 0x80000000u;
+    const unsigned exponent64 = (unsigned)((raw >> 52) & 0x7ffu);
+    const uint64_t fraction64 = raw & UINT64_C(0x000fffffffffffff);
+    uint32_t result_bits = sign;
+
+    if (exponent64 == 0x7ffu) {
+        result_bits |= 0x7f800000u;
+        if (fraction64 != 0u)
+            result_bits |= 0x00400000u;
+    } else if (exponent64 != 0u) {
+        int exponent32 = (int)exponent64 - 1023 + 127;
+        if (exponent32 >= 255) {
+            result_bits |= 0x7f800000u;
+        } else if (exponent32 > 0) {
+            uint32_t fraction32 = (uint32_t)(fraction64 >> 29);
+            const uint64_t remainder = fraction64 & UINT64_C(0x1fffffff);
+            if (remainder > UINT64_C(0x10000000) ||
+                (remainder == UINT64_C(0x10000000) &&
+                 (fraction32 & 1u) != 0u)) {
+                ++fraction32;
+                if (fraction32 == 0x800000u) {
+                    fraction32 = 0;
+                    ++exponent32;
+                }
+            }
+            result_bits |= (uint32_t)exponent32 << 23;
+            result_bits |= fraction32;
+        }
+    }
+
+    float result;
+    __builtin_memcpy(&result, &result_bits, sizeof(result));
+    return result;
+}
+
+static inline void emit_fixed(Writer &writer, double input, bool uppercase,
+                              bool alternate, bool plus, bool space,
+                              bool left, bool zero, int width, int precision,
+                              bool precision_specified)
+{
+    uint64_t raw;
+    __builtin_memcpy(&raw, &input, sizeof(raw));
+    const bool negative = (raw >> 63) != 0u;
+    const unsigned exponent = (unsigned)((raw >> 52) & 0x7ffu);
+    const uint64_t fraction_bits = raw & UINT64_C(0x000fffffffffffff);
+    if (exponent == 0x7ffu) {
+        emit_text(writer,
+                  fraction_bits != 0u ? (uppercase ? "NAN" : "nan")
+                                      : (uppercase ? "INF" : "inf"),
+                  fraction_bits == 0u && negative, plus, space,
+                  left, zero, width);
+        return;
+    }
+
+    if (!precision_specified)
+        precision = 6;
+    if (precision < 0)
+        precision = 0;
+
+    const int calculated_precision = precision > 9 ? 9 : precision;
+    const uint32_t scale = decimal_scale((unsigned)calculated_precision);
+    const float value = rv32_float_from_double_bits(raw &
+                                                    UINT64_C(0x7fffffffffffffff));
+    if (value >= 4294967296.0f) {
+        emit_text(writer, "<float-range>", negative, plus, space,
+                  left, zero, width);
+        return;
+    }
+
+    uint32_t whole = (uint32_t)value;
+    const float fractional_value = value - (float)whole;
+    uint32_t fractional =
+        (uint32_t)(fractional_value * (float)scale + 0.5f);
+    if (fractional >= scale) {
+        fractional = 0;
+        ++whole;
+    }
+
+    char whole_digits[32];
+    const unsigned whole_count =
+        encode_decimal(whole_digits + sizeof(whole_digits), whole);
+    const bool decimal_point = precision != 0 || alternate;
+    const char sign = negative ? '-' : (plus ? '+' : (space ? ' ' : '\0'));
+    const int content_width = (sign != '\0') + (int)whole_count +
+                              (decimal_point ? 1 : 0) + precision;
+    int padding = width - content_width;
+    if (padding < 0)
+        padding = 0;
+
+    if (!left && !zero)
+        writer.repeat(' ', padding);
+    if (sign != '\0')
+        writer.put(sign);
+    if (!left && zero)
+        writer.repeat('0', padding);
+    emit_decimal_digits(writer, whole);
+    if (decimal_point)
+        writer.put('.');
+    emit_zero_padded_decimal(writer, fractional,
+                             (unsigned)calculated_precision);
+    writer.repeat('0', precision - calculated_precision);
+    if (left)
+        writer.repeat(' ', padding);
+}
 #endif
 
 } // namespace edge_sim_console_detail
@@ -443,7 +550,7 @@ static inline int edge_sim_vprintf(const char *format, va_list args)
         }
         case 'f':
         case 'F':
-#if !defined(__riscv) || !defined(__riscv_xlen) || __riscv_xlen != 32
+#if !defined(__riscv) || !defined(__riscv_xlen) || __riscv_xlen != 32 || defined(__riscv_flen)
             emit_fixed(writer, va_arg(ap, double), conversion == 'F',
                        alternate, plus, space, left, zero, width, precision,
                        precision_specified);

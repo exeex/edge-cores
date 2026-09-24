@@ -1,7 +1,8 @@
 # FP4 debug
 
-Build and run a small C++ example that computes values in FP32, packs them as
-sixteen E2M1 FP4 nibbles in `fp4x16_t`, and reads them back for printing:
+Build and run a small C++ example on `edge-e3enc` that computes FP32 values,
+packs them as sixteen E2M1 FP4 nibbles in `fp4x16_t`, and reads them back for
+printing:
 
 ```sh
 ./example/fp4_debug/run.sh
@@ -14,7 +15,7 @@ The example covers three API patterns:
 2. Start with zero and call `pack_next_fp4` exactly sixteen times to produce a
    CUDA-compatible linear FP4 vector. It prints the incomplete four-element
    intermediate state, compares the completed result against random-access
-   packing, and prints the bytes produced by a normal little-endian RV64 store.
+   packing, and prints the bytes produced by a normal little-endian store.
 3. Call `unpack_next_fp4` sixteen times to recover the values in element order
    as FP32 and print them.
 

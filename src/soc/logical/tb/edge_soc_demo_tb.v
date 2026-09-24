@@ -36,6 +36,7 @@ module edge_soc_demo_tb;
   integer tensor_engine_start_run_max;
 `endif
   wire core_csr_break_valid;
+  wire core_ebreak_valid;
   wire [63:0] core_csr_break_code;
   wire [7:0] core_csr_break_seq_id;
   wire [3:0] core_csr_break_epoch;
@@ -172,6 +173,7 @@ module edge_soc_demo_tb;
     .pad_biu_rresp(2'b0), .pad_biu_rvalid(1'b0),
     .pad_biu_awready(1'b0), .pad_biu_bid({ID_WIDTH{1'b0}}),
     .pad_biu_bresp(2'b0), .pad_biu_bvalid(1'b0), .pad_biu_wready(1'b0),
+    .core_ebreak_valid(core_ebreak_valid),
     .core_csr_break_valid(core_csr_break_valid),
     .core_csr_break_code(core_csr_break_code),
     .core_csr_break_seq_id(core_csr_break_seq_id),
@@ -270,6 +272,10 @@ module edge_soc_demo_tb;
       if (core_csr_putchar_valid) begin
         $write("%c", core_csr_putchar_char);
         $fflush();
+      end
+      if (core_ebreak_valid) begin
+        write_report(1'b0, "illegal instruction");
+        $fatal(1, "EDGE_DEMO illegal instruction");
       end
       if (core_csr_break_valid) begin
         if (core_csr_break_code != 0) begin

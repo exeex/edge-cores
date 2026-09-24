@@ -25,7 +25,7 @@ words="$(tr -d '[:space:]' < "${OUT_DIR}/fp4_debug.words")"
     "${SIM_EXE}" \
         "+mem128=${OUT_DIR}/fp4_debug.memh" \
         "+mem128_words=${words}" \
-        +max_cycles=40000 \
+        +max_cycles=200000 \
         +run_case_report=run_case.report
 ) 2>&1 | tee "${LOG}" | sed '/^- .*Verilog \$finish$/d'
 

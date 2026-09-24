@@ -132,13 +132,12 @@ length and an unaligned pointer: rounding can still select one cache line.
 | `edge_sim_putchar(ch)` | Write one byte to the simulator console CSR |
 
 `edge_sim_console.hpp` provides a freestanding `printf`. Its `%f`/`%F`
-formatter consumes the C variadic `double` argument, supports width, sign,
-zero-pad and precision, and performs decimal conversion with D-encoded
-floating-point operations plus `fcvt` to integer. Edge accepts the D encoding
-and `double` ABI without compiler soft-float helpers, while the physical FPR
-and arithmetic datapath retain FP32 precision. `fld`/`fsd` convert between an
-IEEE64 memory payload and that canonical FP32 value. `%e` and `%g` remain
-diagnostic placeholders.
+formatter consumes the C variadic `double` argument and supports width, sign,
+zero padding, and precision. On RV32IMF, `soft_double.c` widens promoted FP32
+arguments to the `double` ABI; the formatter reads the IEEE64 bits and rounds
+to FP32 before decimal conversion. The earlier RV64 path uses D-encoded
+operations on its reduced-precision datapath. `%e` and `%g` remain diagnostic
+placeholders.
 | `edge_exit(return_value)` | Report a simulator return value, then remain in `wfi` forever |
 
 `edge_exit()` does not return. Applications normally use the repository's

@@ -1,6 +1,6 @@
 # Hello world
 
-Build and run the smallest Edge bare-metal C++ program:
+Build and run the smallest Edge bare-metal C++ program on `edge-e3enc`:
 
 ```sh
 ./example/hello/run.sh

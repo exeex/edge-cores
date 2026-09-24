@@ -54,7 +54,7 @@ done
 mkdir -p "${OUT_DIR}"
 target_flags=(
     --target=riscv32-unknown-elf
-    -march=rv32im_zba
+    -march=rv32imf_zba
     -mabi=ilp32
     -mcmodel=medany
 )
@@ -69,6 +69,10 @@ include_flags=(
     -c "${REPO_ROOT}/cpp/baremetal/crt0.s" \
     -o "${OUT_DIR}/crt0.o"
 
+"${CLANG}" "${target_flags[@]}" -std=c11 -ffreestanding -fno-builtin -O2 \
+    -c "${REPO_ROOT}/cpp/baremetal/soft_double.c" \
+    -o "${OUT_DIR}/soft_double.o"
+
 "${CLANGXX}" "${target_flags[@]}" \
     -x c++ -std=c++17 -ffreestanding -fno-builtin \
     -fno-exceptions -fno-rtti -fno-pic -fno-pie -O2 \
@@ -82,7 +86,7 @@ link_command=(
     -nostdlib -nostartfiles
     -Wl,-T,"${REPO_ROOT}/cpp/baremetal/linker.ld"
     -Wl,-Map,"${OUT_DIR}/${NAME}.map"
-    "${OUT_DIR}/crt0.o" "${OUT_DIR}/${NAME}.o"
+    "${OUT_DIR}/crt0.o" "${OUT_DIR}/${NAME}.o" "${OUT_DIR}/soft_double.o"
 )
 if [[ -f "${COMPILER_RT_BUILTINS}" ]]; then
     link_command+=("${COMPILER_RT_BUILTINS}")

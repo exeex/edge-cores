@@ -6,6 +6,9 @@
 /* RV32 instruction encoding is owned by the public edge-32 submodule. */
 #include "edge_memory_map.hpp"
 #include "edge32_intrinsic.hpp"
+#ifdef __cplusplus
+#include "edge_lowp_rv32.hpp"
+#endif
 
 #else
 

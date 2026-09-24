@@ -3,7 +3,7 @@
 This example exports the tiny Llama 3 transformer block in
 `model/llama3_source.py`, lowers it through `nnc/compiler.py`,
 links the generated weights and example inputs into a bare-metal RISC-V image, and checks the
-encrypted-core Verilator output against PyTorch.
+`edge-e3enc` Verilator output against PyTorch.
 
 ```sh
 ./scripts/setup-python.sh

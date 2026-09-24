@@ -25,19 +25,21 @@ words="$(tr -d '[:space:]' < "${OUT_DIR}/fp8_bf16_debug.words")"
     "${SIM_EXE}" \
         "+mem128=${OUT_DIR}/fp8_bf16_debug.memh" \
         "+mem128_words=${words}" \
-        +max_cycles=30000 \
+        +max_cycles=200000 \
         +run_case_report=run_case.report
 ) 2>&1 | tee "${LOG}" | sed '/^- .*Verilog \$finish$/d'
 
-grep -q "Float debug:" "${LOG}"
-grep -q -- "-12.375000 2.000 +00003.50 2" "${LOG}"
-grep -q -- "Float edges: negzero=-0.00 carry=1.000 alt=2. left=\[1.25    \]" "${LOG}"
-grep -q -- "Float special: nan INF -inf wide=0.500000000000" "${LOG}"
-grep -q -- "Low precision: bf16=1.500000 e5m2=1.500000 e4m3fn=1.500000" "${LOG}"
-grep -q -- "BF16 arithmetic: add=2.000000 sub=1.000000 mul=0.750000 div=3.000000" "${LOG}"
-grep -q -- "FP8 E5M2 arithmetic: add=2.000000 sub=1.000000 mul=0.750000 div=3.000000" "${LOG}"
-grep -q -- "FP8 E4M3FN arithmetic: add=2.000000 sub=1.000000 mul=0.750000 div=3.000000" "${LOG}"
-grep -q -- "BF16 result types: chained-f32=2.000000 rounded-lowp=0.750000" "${LOG}"
-grep -q -- "FP8 E5M2 result types: chained-f32=2.000000 rounded-lowp=0.750000" "${LOG}"
-grep -q -- "FP8 E4M3FN result types: chained-f32=2.000000 rounded-lowp=0.750000" "${LOG}"
+grep -q "Float debug: -12.375000 2.000 +00003.50 2" "${LOG}"
+grep -q "Float edges: negzero=-0.00 carry=1.000 alt=2. left=\[1.25    \]" "${LOG}"
+grep -q "Float special: nan INF -inf wide=0.500000000000" "${LOG}"
+grep -q "Low precision: bf16=1.500000 e5m2=1.500000 e4m3fn=1.500000" "${LOG}"
+grep -q "BF16 arithmetic: add=2.000000 sub=1.000000 mul=0.750000 div=3.000000" "${LOG}"
+grep -q "FP8 E5M2 arithmetic: add=2.000000 sub=1.000000 mul=0.750000 div=3.000000" "${LOG}"
+grep -q "FP8 E4M3FN arithmetic: add=2.000000 sub=1.000000 mul=0.750000 div=3.000000" "${LOG}"
+grep -q "BF16 result types: chained-f32=2.000000 rounded-lowp=0.750000" "${LOG}"
+grep -q "FP8 E5M2 result types: chained-f32=2.000000 rounded-lowp=0.750000" "${LOG}"
+grep -q "FP8 E4M3FN result types: chained-f32=2.000000 rounded-lowp=0.750000" "${LOG}"
+grep -q "BF16 scalar PASS lhs=0x3fc0 rhs=0x3f00 rounded=0x3f40" "${LOG}"
+grep -q "FP8 E5M2 scalar PASS lhs=0x003e rhs=0x0038 rounded=0x003a" "${LOG}"
+grep -q "FP8 E4M3FN scalar PASS lhs=0x003c rhs=0x0030 rounded=0x0034" "${LOG}"
 grep -q "TEST PASS" "${REPORT}"

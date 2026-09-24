@@ -29,15 +29,17 @@ extern "C" int main(void)
     print_fp4_value(get_element_fp4(random_access, 3));
     printf(" idx12=");
     print_fp4_value(get_element_fp4(random_access, 12));
-    printf(" packed=0x%016llx\n",
-           static_cast<unsigned long long>(random_access.data));
+    printf(" packed=0x%08x%08x\n",
+           static_cast<unsigned>(random_access.data >> 32),
+           static_cast<unsigned>(random_access.data));
 
     printf("[2] Full 16-element streaming pack\n");
     fp4x16_t partial = {0};
     for (int element_id = 0; element_id < 4; ++element_id)
         pack_next_fp4(partial, make_value(element_id));
-    printf("after 4/16 (incomplete, do not store): 0x%016llx\n",
-           static_cast<unsigned long long>(partial.data));
+    printf("after 4/16 (incomplete, do not store): 0x%08x%08x\n",
+           static_cast<unsigned>(partial.data >> 32),
+           static_cast<unsigned>(partial.data));
 
     fp4x16_t expected = {0};
     fp4x16_t streamed = {0};
@@ -51,11 +53,12 @@ extern "C" int main(void)
     }
     printf("\n");
 
-    printf("pack vs set: %s packed=0x%016llx\n",
+    printf("pack vs set: %s packed=0x%08x%08x\n",
            streamed.data == expected.data ? "MATCH" : "MISMATCH",
-           static_cast<unsigned long long>(streamed.data));
+           static_cast<unsigned>(streamed.data >> 32),
+           static_cast<unsigned>(streamed.data));
 
-    // A normal RV64 store exposes CUDA linear order in little-endian bytes.
+    // A normal store exposes CUDA linear order in little-endian bytes.
     volatile fp4x16_t stored = {streamed.data};
     const volatile uint8_t *bytes =
         reinterpret_cast<const volatile uint8_t *>(&stored);
@@ -71,8 +74,9 @@ extern "C" int main(void)
         printf(" ");
         print_fp4_value(value);
     }
-    printf(" remaining=0x%016llx\n",
-           static_cast<unsigned long long>(streamed.data));
+    printf(" remaining=0x%08x%08x\n",
+           static_cast<unsigned>(streamed.data >> 32),
+           static_cast<unsigned>(streamed.data));
 
     return 0;
 }
