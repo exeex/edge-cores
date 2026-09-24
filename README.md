@@ -3,8 +3,8 @@
 **The shortest way from PyTorch to ASICs.**
 
 Export PyTorch models to bare-metal C++ and run them on ASIC RTL with Verilator.
-Bring your own accelerator to the open-source `edge-rv` or `edge-rv-lite`
-control plane, or start with the source-available `edge-e3` reference NPU.
+Bring your own accelerator to the open-source `edge-32` control processor, or
+start with the source-available `edge-e3` reference NPU.
 
 The flow uses the standard **Clang/LLVM toolchain**--installed with
 `apt-get install` on Ubuntu--instead of a custom compiler or patched LLVM/MLIR
@@ -21,7 +21,7 @@ from the critical path and makes zero-day support for newly released Hugging
 Face models practical.
 
 The simpler toolchain does not come at the expense of accelerator utilization.
-The maintained [`example/tensor`](example/tensor/README.md) reaches **94.72%
+The maintained [`example/tensor`](example/tensor/README.md) reaches **92.93%
 effective MAC utilization** on a 64x64x128 BF16 matmul, including packed weight
 DMA, circular weight loads, Tensor execution, and synchronization.
 
@@ -146,11 +146,11 @@ script for comparison.
 
 - **Run edge-e3enc:** build the encrypted Verilator model and execute the hello,
   tensor, and PyTorch-to-NNC examples.
-- **Integrate your own accelerator:** combine your RTL with `edge-rv` or
-  `edge-rv-lite`, then define its instruction, memory, and verification paths.
+- **Integrate your own accelerator:** combine your RTL with `edge-32`, then
+  define its instruction, memory, and verification paths.
 - **Explore architecture research:** experiment with dataflows, numerical
   formats, DMA, SRAM, interconnects, chiplets, or clusters.
-- **Contribute to edge-rv:** file a centralized issue and prepare a focused,
+- **Contribute to edge-32:** file a centralized issue and prepare a focused,
   tested pull request.
 
 ## Quick Start
@@ -165,14 +165,12 @@ Use $edge-bringup to set up this machine and run the initial smoke tests.
 
 ## Architecture
 
-### Open RV64 integration platform
+### Open RV32 integration platform
 
-`edge-rv` provides scalar control, instruction decode, asynchronous accelerator
-commands, snapshot-based GPR parameter capture, caches, optional floating
-point, and integration points for DMA, SRAM, and custom compute.
-
-`edge-rv-lite` provides a smaller serialized control plane for accelerators
-that do not require the full snapshot and overlap machinery.
+`edge-32` provides a four-stage, single-issue, in-order RV32IMF processor with
+Zba for scalar control. It includes instruction decode, accelerator commands,
+caches, floating point, and integration points for DMA, SRAM, and custom
+compute.
 
 Composed cores use this naming convention:
 
@@ -180,14 +178,14 @@ Composed cores use this naming convention:
 rv_core_name@asic_core_name
 ```
 
-For example, `edge-rv@e3` combines the open `edge-rv` control plane with the e3
+For example, `edge-32@e3` combines the open `edge-32` processor with the e3
 ASIC set. A custom integration could use a name such as
-`edge-rv-lite@your_asic_name`.
+`edge-32@your_asic_name`.
 
-### edge-rv@e3 reference composition
+### edge-32@e3 reference composition
 
-![edge-rv@e3 architecture showing the edge-rv control plane, tensor unit, DMA,
-accelerator units, and shared DTCM](docs/images/edge-rv-e3-architecture.svg)
+![edge-32@e3 architecture showing the edge-32 processor, tensor unit, DMA,
+accelerator units, and shared DTCM](docs/images/edge-32-e3-architecture.svg)
 
 The current reference composition includes:
 
@@ -204,7 +202,7 @@ design retains its own architecture, repository, and license.
 ## Bring Your Own Design
 
 Add an accelerator or ASIC repository below `src/` as a Git submodule and
-connect it to `edge-rv` or `edge-rv-lite`. A design can range from one operator
+connect it to `edge-32`. A design can range from one operator
 to a complete compute and memory subsystem.
 
 The [`integrate-your-design`](.codex/skills/integrate-your-design/SKILL.md)
@@ -234,7 +232,7 @@ Use $integrate-your-design to connect my accelerator and define its software, me
 
 The Edge E/P families demonstrate complete NPU configurations built on the
 shared framework. They are reference products rather than limits on what
-`edge-rv` can support, and their RTL is not uniformly open.
+`edge-32` can support, and their RTL is not uniformly open.
 
 ### Product overview
 
@@ -275,20 +273,9 @@ The tensor example is the smallest end-to-end demonstration of these patterns.
 
 ## Performance Snapshot
 
-All results below are historical RTL simulation checkpoints, not silicon
-measurements. Run the maintained examples for measurements on the current
-`edge-e3enc` release.
-
-### Scalar
-
-The scalar reference is the T-Head C906 RTL from
-[OpenC906](https://github.com/XUANTIE-RV/openc906).
-
-| Benchmark | edge-e3 | T-Head C906 | Relative result |
-| --- | ---: | ---: | --- |
-| CoreMark, cycles/iteration | 409,490 | 432,703 | edge-e3 1.06x faster |
-| FP32 Nelder-Mead, cycles | 7,860 | 10,924 | edge-e3 1.39x faster |
-| JPEG block, cycles | 161,281 | 101,108 | C906 1.60x faster |
+The Tensor result below comes from the maintained example on the current
+`edge-e3enc` RTL. The Activation results are historical RTL simulation
+checkpoints. These are not silicon measurements.
 
 ### Tensor
 
@@ -296,16 +283,18 @@ The maintained [`example/tensor`](example/tensor/README.md) case runs a
 64x64x128 BF16 matrix multiplication with packed weight DMA and transpose
 circular weight loads:
 
-| Ideal MAC cycles | Measured end-to-end cycles | Effective MAC utilization |
+| Ideal MAC cycles | Measured `rdcycle` interval | Effective MAC utilization |
 | ---: | ---: | ---: |
-| 8,192 | 8,649 | **94.72%** |
+| 8,192 | 8,815 | **92.93%** |
 
-Effective MAC utilization is calculated as `ideal MAC cycles / measured
-cycles`. The measured RTL interval starts before the packed weight DMA and ends
+Effective MAC utilization is calculated as `ideal MAC cycles / cycle_delta`.
+The measured RTL interval starts before the packed weight DMA and ends
 after both `edge_tensor_sync()` and `edge_dma_sync()`, so it includes DMA,
 circular weight loading, Tensor execution, loop/control overhead, and final
 synchronization. One-time test-data initialization and the subsequent output
-copy back to DRAM are outside this interval.
+copy back to DRAM are outside this interval. Older checkpoints published this
+same timing boundary through X30; the current example prints `cycle_delta`.
+X31 carries the program exit code in the current harness.
 
 Run the same public example with:
 
@@ -345,16 +334,15 @@ measurement details.
 
 ## Research
 
-Use Edge RV to avoid rebuilding scalar control, asynchronous command issue,
+Use Edge32 to avoid rebuilding scalar control, accelerator command issue,
 simulation, and software infrastructure for each architecture experiment.
 Unconventional or deliberately idealized assumptions are welcome when they are
 stated clearly and help isolate a research question.
 
-When publishing results, distinguish the edge-cores contribution—such as its
-snapshot mechanism and tightly integrated dual-issue, in-order issue and
-out-of-order execution model—from the new accelerator, dataflow, PPA, or
-application contribution. Use [`references.bib`](references.bib) for the
-canonical citation.
+When publishing results, distinguish the edge-cores contribution—such as the
+four-stage, single-issue Edge32 processor and its accelerator integration—from
+the new accelerator, dataflow, PPA, or application contribution. Use
+[`references.bib`](references.bib) for the canonical citation.
 
 ## Contributing
 
@@ -377,7 +365,7 @@ The C++ libraries, Python compiler and runtime tools, scripts, examples, SoC
 harness RTL, documentation, and automation maintained directly in edge-cores
 are licensed under Apache-2.0.
 
-The reusable `edge-rv` framework is licensed under CERN-OHL-P-2.0. Edge product
+The reusable `edge-32` processor is licensed under CERN-OHL-P-2.0. Edge product
 repositories and generated RTL may use different licenses. In particular,
 edge-e3 is source-available under the edge-e3 Hardware License 1.0 and is not
 OSI-approved open-source hardware.
