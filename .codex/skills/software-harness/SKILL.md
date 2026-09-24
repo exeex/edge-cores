@@ -5,9 +5,10 @@ description: Run, extend, debug, or review the public edge-e3 bare-metal softwar
 
 # Software Harness
 
-Use only the public encrypted-core path. Keep `src/edge-e3` deinitialized while
-validating the public harness; `scripts/build-verilator.sh` must obtain the core
-and SRAM models exclusively from `src/edge-e3enc`.
+Use only the public encrypted-core path. Keep `src/edge-e3` and `src/edge-asic`
+deinitialized while validating the public harness; `scripts/build-verilator.sh`
+must obtain the private product RTL and SRAM models exclusively from
+`src/edge-e3enc`.
 
 ## Select the validation scope
 
@@ -25,18 +26,19 @@ Install the Python dependency from `nnc/requirements.txt` when needed.
 
 ## Run the complete public regression
 
-Verify the private source submodule is absent, then run:
+Verify both private source submodules are absent, then run:
 
 ```sh
 git submodule status src/edge-e3
+git submodule status src/edge-asic
 python3 -m unittest nnc.test_compiler
 ./example/hello/run.sh
 ./example/tensor/run.sh
 ./example/llama/test.sh
 ```
 
-The submodule status must begin with `-`. Do not initialize `src/edge-e3` to
-make a public case pass.
+Both submodule status lines must begin with `-`. Do not initialize private RTL
+to make a public case pass.
 
 ## Llama suite contract
 

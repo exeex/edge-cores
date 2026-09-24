@@ -73,7 +73,10 @@ JSON_SYMBOL_TYPES = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--private-root", type=Path, default=Path("src/edge-e3"))
+    parser.add_argument(
+        "--private-root", type=Path, action="append", dest="private_roots",
+        help="RTL root to obfuscate; repeat for multiple private submodules",
+    )
     parser.add_argument(
         "--public-root",
         type=Path,
@@ -242,7 +245,7 @@ def is_below_any(path: Path, roots: list[Path]) -> bool:
 
 
 def relative_roots(roots: list[Path], repo_root: Path) -> str:
-    return ", ".join(root.relative_to(repo_root).as_posix() for root in roots)
+    return ", ".join(f"`{root.relative_to(repo_root).as_posix()}`" for root in roots)
 
 
 def module_names(text: str) -> set[str]:
@@ -363,7 +366,7 @@ def rewrite(text: str, symbols: dict[str, str], keep_comments: bool) -> str:
     for match in TOKEN_RE.finditer(text):
         value = match.group(0)
         pieces.append(symbols.get(value, value) if match.lastgroup == "ident" else value)
-    return "".join(pieces)
+    return re.sub(r"[ \t]+(?=\r?$)", "", "".join(pieces), flags=re.MULTILINE)
 
 
 def validate_mixed(
@@ -413,33 +416,46 @@ def validate_soc(
 
 def main() -> int:
     args = parse_args()
-    private_root = args.private_root.resolve()
+    private_roots = [
+        path.resolve()
+        for path in (args.private_roots or [Path("src/edge-e3"), Path("src/edge-asic")])
+    ]
     public_roots = [
         path.resolve()
-        for path in (
-            args.public_roots
-            or [Path("src/edge-32"), Path("src/edge-asic")]
-        )
+        for path in (args.public_roots or [Path("src/edge-32")])
     ]
-    include_dirs = [directory for root in public_roots for directory in (root, root / "rtl")]
+    source_include_dirs = [
+        directory
+        for root in public_roots + private_roots
+        for directory in (root, root / "rtl")
+    ]
+    consumer_include_dirs = [
+        directory for root in public_roots for directory in (root, root / "rtl")
+    ]
     output = args.output.resolve()
     license_file = args.license.resolve()
     filelist = args.filelist.resolve()
     soc = args.soc.resolve()
-    repo_root = private_root.parent.parent
-    if not private_root.is_dir() or any(not root.is_dir() for root in public_roots):
+    repo_root = private_roots[0].parent.parent
+    if any(not root.is_dir() for root in private_roots + public_roots):
         raise SystemExit("private or public RTL root does not exist")
+    if any(not is_below(root, repo_root) for root in private_roots + public_roots):
+        raise SystemExit("private and public RTL roots must share a repository root")
+    if any(is_below_any(root, public_roots) for root in private_roots) or any(
+        is_below_any(root, private_roots) for root in public_roots
+    ):
+        raise SystemExit("private and public RTL roots must not overlap")
     if not filelist.is_file() or not soc.is_file() or not license_file.is_file():
         raise SystemExit("filelist, SoC boundary, or license file does not exist")
-    if output == private_root or private_root in output.parents:
+    if is_below_any(output, private_roots + public_roots):
         raise SystemExit("output must not overwrite or be nested under the readable source")
 
     patterns = [re.compile(item, re.I) for item in DEFAULT_SRAM_PATTERNS + tuple(args.sram_pattern)]
-    all_files = expand_filelist(filelist, private_root)
+    all_files = expand_filelist(filelist, private_roots[0])
     missing = [path for path in all_files if not path.is_file()]
     outside = [
         path for path in all_files
-        if not is_below(path, private_root) and not is_below_any(path, public_roots)
+        if not is_below_any(path, private_roots + public_roots)
     ]
     if missing:
         raise SystemExit("missing filelist inputs: " + ", ".join(map(str, missing)))
@@ -448,7 +464,7 @@ def main() -> int:
             "production filelist contains files outside private/public roots: "
             + ", ".join(map(str, outside))
         )
-    private_files = [path for path in all_files if is_below(path, private_root)]
+    private_files = [path for path in all_files if is_below_any(path, private_roots)]
     public_files = [path for path in all_files if is_below_any(path, public_roots)]
     private_sram_files = [
         path for path in private_files if is_sram(path, repo_root, patterns)
@@ -485,7 +501,8 @@ def main() -> int:
     stage = Path(tempfile.mkdtemp(prefix=f".{output.name}.", dir=output.parent))
     try:
         json_path, source_warnings = run_json(
-            args.verilator, args.top, all_rtl_files, all_sram_files, include_dirs, temp
+            args.verilator, args.top, all_rtl_files, all_sram_files,
+            source_include_dirs, temp
         )
         private_source_symbols: set[str] = set()
         for text in list(texts.values()) + list(private_sram_texts.values()):
@@ -531,7 +548,7 @@ def main() -> int:
         validation_fl = temp / "mixed-absolute.fl"
         write_plain_filelist(validation_fl, public_files + [combined, sram_combined])
         mixed_warnings = validate_mixed(
-            args.verilator, args.top, validation_fl, include_dirs, temp
+            args.verilator, args.top, validation_fl, consumer_include_dirs, temp
         )
         soc_files = [
             repo_root / "src/soc/logical/axi/edge_axi_interconnect.v",
@@ -541,7 +558,7 @@ def main() -> int:
         ]
         soc_warnings = validate_soc(
             args.verilator, args.soc_top, soc_files,
-            public_files + [combined, sram_combined], include_dirs, temp
+            public_files + [combined, sram_combined], consumer_include_dirs, temp
         )
 
         portable_output = args.portable_output or output.relative_to(repo_root)
@@ -564,7 +581,7 @@ def main() -> int:
         )
 
         manifest = {
-            "format": 1,
+            "format": 2,
             "top": args.top,
             "soc_core_module": args.soc_core_module,
             "private_rtl_inputs": len(private_rtl_files),
@@ -579,7 +596,7 @@ def main() -> int:
             "soc_warning_count": soc_warnings,
             "salt_sha256": hashlib.sha256(args.salt.encode()).hexdigest(),
             "public_roots": [root.relative_to(repo_root).as_posix() for root in public_roots],
-            "private_root": private_root.relative_to(repo_root).as_posix(),
+            "private_roots": [root.relative_to(repo_root).as_posix() for root in private_roots],
             "product_name": args.product_name,
             "artifact_stem": args.artifact_stem,
             "namespace": args.namespace,
@@ -588,12 +605,12 @@ def main() -> int:
         shutil.copyfile(license_file, stage / "LICENSE.md")
         (stage / "README.md").write_text(
             f"# Generated {args.product_name} RTL\n\n"
-            f"`{combined.name}` and `{sram_combined.name}` contain only obfuscated "
-            f"private {args.product_name} RTL.\n"
-            f"`{public_fl.name}` lists unchanged open RTL from `{relative_roots(public_roots, repo_root)}`. "
+            f"`{combined.name}` and `{sram_combined.name}` contain the obfuscated "
+            f"private product RTL selected from {relative_roots(private_roots, repo_root)}.\n"
+            f"`{public_fl.name}` lists unchanged open RTL from {relative_roots(public_roots, repo_root)}. "
             f"Use `{mixed_fl.name}` for the complete design, or combine the private "
             "RTL with target-specific SRAM models/replacements for FPGA/OpenROAD.\n\n"
-            f"The obfuscated {args.product_name} RTL is distributed under the "
+            f"The obfuscated product RTL is distributed under the "
             "license in `LICENSE.md`.\n\n"
             "Generate from the repository root with:\n\n"
             f"```sh\n{args.regenerate_command}\n```\n\n"

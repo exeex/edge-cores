@@ -21,16 +21,16 @@ resolve_llvm_tool() {
         printf '%s\n' "${explicit}"
         return
     fi
-    if candidate="$(command -v "${name}" 2>/dev/null)"; then
-        printf '%s\n' "${candidate}"
-        return
-    fi
     for candidate in "/opt/homebrew/opt/llvm/bin/${name}" "/opt/homebrew/opt/lld/bin/${name}"; do
         if [[ -x "${candidate}" ]]; then
             printf '%s\n' "${candidate}"
             return
         fi
     done
+    if candidate="$(command -v "${name}" 2>/dev/null)"; then
+        printf '%s\n' "${candidate}"
+        return
+    fi
     candidate="$(compgen -G "/usr/bin/${name}-[0-9]*" | sort -V | tail -n 1 || true)"
     if [[ -n "${candidate}" ]]; then
         printf '%s\n' "${candidate}"
@@ -60,11 +60,6 @@ target_flags=(
 )
 
 COMPILER_RT_BUILTINS="$(${CLANG} "${target_flags[@]}" -print-libgcc-file-name)"
-link_runtime=()
-if [[ -f "${COMPILER_RT_BUILTINS}" ]]; then
-    link_runtime=("${COMPILER_RT_BUILTINS}")
-fi
-
 include_flags=(
     -I"${REPO_ROOT}/cpp"
     -I"${REPO_ROOT}/src/edge-32/include"
@@ -81,13 +76,19 @@ include_flags=(
     -c "${SOURCE}" \
     -o "${OUT_DIR}/${NAME}.o"
 
-"${CLANG}" "${target_flags[@]}" \
-    -fuse-ld=lld -B"$(dirname "${LLD}")" \
-    -nostdlib -nostartfiles \
-    -Wl,-T,"${REPO_ROOT}/cpp/baremetal/linker.ld" \
-    -Wl,-Map,"${OUT_DIR}/${NAME}.map" \
-    "${OUT_DIR}/crt0.o" "${OUT_DIR}/${NAME}.o" "${link_runtime[@]}" \
-    -o "${OUT_DIR}/${NAME}.elf"
+link_command=(
+    "${CLANG}" "${target_flags[@]}"
+    -fuse-ld=lld -B"$(dirname "${LLD}")"
+    -nostdlib -nostartfiles
+    -Wl,-T,"${REPO_ROOT}/cpp/baremetal/linker.ld"
+    -Wl,-Map,"${OUT_DIR}/${NAME}.map"
+    "${OUT_DIR}/crt0.o" "${OUT_DIR}/${NAME}.o"
+)
+if [[ -f "${COMPILER_RT_BUILTINS}" ]]; then
+    link_command+=("${COMPILER_RT_BUILTINS}")
+fi
+link_command+=(-o "${OUT_DIR}/${NAME}.elf")
+"${link_command[@]}"
 
 if [[ -x "${LLVM_OBJDUMP}" ]]; then
     "${LLVM_OBJDUMP}" -d --no-show-raw-insn \

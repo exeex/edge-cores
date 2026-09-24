@@ -75,12 +75,13 @@ Initialize only required public submodules:
 
 ```sh
 git submodule update --init \
-  src/edge-e3enc src/edge-rv third_party/coremark third_party/openc906
+  src/edge-e3enc src/edge-32 third_party/coremark third_party/openc906
 ./scripts/setup-python.sh
 ```
 
-Keep `src/edge-e3` deinitialized for the public flow. Never initialize or use a
-private/non-public checkout merely to make a public test pass.
+Keep `src/edge-e3` and `src/edge-asic` deinitialized for the public flow.
+Never initialize or use a private/non-public checkout merely to make a public
+test pass.
 
 `scripts/setup-python.sh` selects one mutually exclusive PyTorch extra from
 `pyproject.toml` and runs `uv sync`:

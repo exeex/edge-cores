@@ -35,6 +35,10 @@ done
 
 while IFS= read -r relative_path; do
     [[ -z "${relative_path}" || "${relative_path}" == \#* ]] && continue
+    if [[ "${relative_path}" != src/edge-e3enc/* ]]; then
+        echo "error: SRAM filelist contains a source outside edge-e3enc: ${relative_path}" >&2
+        exit 1
+    fi
     if [[ ! -f "${REPO_ROOT}/${relative_path}" ]]; then
         echo "error: SRAM model is missing: ${REPO_ROOT}/${relative_path}" >&2
         echo "hint: edge-e3enc must include its public SRAM boundary models" >&2
@@ -44,9 +48,13 @@ done < "${SRAM_FILELIST}"
 
 while IFS= read -r relative_path; do
     [[ -z "${relative_path}" || "${relative_path}" == \#* ]] && continue
+    if [[ "${relative_path}" != src/edge-32/* ]]; then
+        echo "error: public RTL filelist contains a non-Edge32 source: ${relative_path}" >&2
+        exit 1
+    fi
     if [[ ! -f "${REPO_ROOT}/${relative_path}" ]]; then
-        echo "error: public Edge32/ASIC RTL is missing: ${REPO_ROOT}/${relative_path}" >&2
-        echo "hint: initialize the src/edge-32 and src/edge-asic submodules" >&2
+        echo "error: public Edge32 RTL is missing: ${REPO_ROOT}/${relative_path}" >&2
+        echo "hint: initialize the src/edge-32 submodule" >&2
         exit 1
     fi
 done < "${PUBLIC_FILELIST}"
@@ -68,7 +76,6 @@ cd "${REPO_ROOT}"
     -DEDGE_SCALAR_LSU_QUEUE_DEPTH=4 \
     -DEDGE_SCALAR_LOAD_QUEUE_DEPTH=2 \
     -I"${REPO_ROOT}/src/edge-32/rtl" \
-    -I"${REPO_ROOT}/src/edge-asic/rtl" \
     -Mdir "${OBJ_DIR}" \
     "${REPO_ROOT}/src/soc/logical/tb/edge_soc_demo_tb.v" \
     "${REPO_ROOT}/src/soc/logical/common/edge_soc_top.v" \

@@ -31,12 +31,13 @@ def tool(env_name: str, fallback: str) -> str:
     explicit = os.environ.get(env_name)
     if explicit:
         return explicit
+    for directory in ("/opt/homebrew/opt/llvm/bin", "/opt/homebrew/opt/lld/bin"):
+        homebrew = Path(directory) / fallback
+        if homebrew.is_file():
+            return str(homebrew)
     path = shutil.which(fallback)
     if path:
         return path
-    homebrew = Path("/opt/homebrew/opt/llvm/bin") / fallback
-    if homebrew.exists():
-        return str(homebrew)
     versioned = glob.glob(f"/usr/bin/{fallback}-[0-9]*")
     if versioned:
         def version(path: str) -> tuple[int, ...]:

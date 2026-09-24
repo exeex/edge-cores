@@ -21,21 +21,16 @@ Use `tools/package_obfuscated_rtl.py` for the generic flow and
 
 ## Generate a package
 
-Resolve the private root, public root, production filelist, SoC boundary, license,
-output submodule, top module, and SoC core module. Run from the public repository
-root. For the maintained n906-to-edge-cores E3 flow:
+Resolve every private root, the public root, production filelist, SoC boundary,
+license, output submodule, top module, and SoC core module. The maintained
+`edge-cores` defaults obfuscate both `src/edge-e3` and `src/edge-asic`, leaving
+only `src/edge-32` as unchanged public RTL:
 
 ```sh
-python3 tools/package_obfuscated_rtl.py \
-  --private-root /path/to/n906/src/edge-e3 \
-  --public-root /path/to/n906/src/edge-rv \
-  --output /path/to/edge-cores/src/edge-e3enc \
-  --portable-output src/edge-e3enc \
-  --license /path/to/n906/src/edge-e3/LICENSE.md \
-  --filelist /path/to/n906/src/edge-e3/edge_core/filelists/edge_core_top_verilator_prod.fl \
-  --soc /path/to/n906/src/soc/logical/common/edge_soc_top.v
+python3 tools/package_obfuscated_rtl.py
 ```
 
+For another checkout, pass `--private-root` once for each private source tree.
 For another design, set at least `--product-name`, `--artifact-stem`,
 `--namespace`, `--top`, `--soc-top`, `--soc-core-module`, and
 `--regenerate-command`. Add `--sram-pattern` or `--keep` only for genuine hard
@@ -69,9 +64,8 @@ Use `sha256sum` instead of `shasum -a 256` where appropriate.
 
 ## Validate the public consumer
 
-Deinitialize every licensed source/test submodule before the consumer test. For
-edge-cores, keep `src/edge-e3`, `src/test-e3`, and `src/test-rv` deinitialized,
-then run:
+Use a checkout with only `src/edge-32` and `src/edge-e3enc` initialized.
+Keep `src/edge-e3`, `src/edge-asic`, and `src/test-e3` absent, then run:
 
 ```sh
 ./scripts/build-verilator.sh
