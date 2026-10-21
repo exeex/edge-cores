@@ -11,13 +11,8 @@ namespace edge_sim_console_detail {
 using edge_size_t = __SIZE_TYPE__;
 using edge_ptrdiff_t = __PTRDIFF_TYPE__;
 
-#if defined(__riscv) && defined(__riscv_xlen) && __riscv_xlen == 32
 using edge_console_uint_t = uint32_t;
 using edge_console_int_t = int32_t;
-#else
-using edge_console_uint_t = uint64_t;
-using edge_console_int_t = int64_t;
-#endif
 
 struct Writer {
     int count;
@@ -197,116 +192,6 @@ static inline void emit_text(Writer &writer, const char *text,
         writer.repeat(' ', padding);
 }
 
-#if !defined(__riscv) || !defined(__riscv_xlen) || __riscv_xlen != 32
-__attribute__((always_inline)) static inline double
-normalize_vararg_double(double input)
-{
-    uint64_t raw;
-    __builtin_memcpy(&raw, &input, sizeof(raw));
-    const uint32_t high = (uint32_t)(raw >> 32);
-
-    // With Edge's reduced-precision D execution, float-to-double promotion
-    // leaves the canonical FP32 payload sign-extended in the ABI slot.
-    if (high == 0u || high == 0xffffffffu) {
-        const uint32_t bits = (uint32_t)raw;
-        float value;
-        __builtin_memcpy(&value, &bits, sizeof(value));
-        return (double)value;
-    }
-
-    // A source-level double arrives as IEEE64 bits in the vararg slot.  The
-    // RV32 hello path is built without F/D, so keep the software value intact
-    // there; an F/D-enabled product may use the architectural reload below.
-#if defined(__riscv_flen) && __riscv_flen >= 64
-    volatile uint64_t slot = raw;
-    double value;
-    __asm__ volatile("fld %0, 0(%1)"
-                     : "=f"(value)
-                     : "r"(&slot)
-                     : "memory");
-    return value;
-#else
-    return input;
-#endif
-}
-#endif
-
-#if !defined(__riscv) || !defined(__riscv_xlen) || __riscv_xlen != 32
-static inline void emit_fixed(Writer &writer, double input, bool uppercase,
-                              bool alternate, bool plus, bool space,
-                              bool left, bool zero, int width, int precision,
-                              bool precision_specified)
-{
-    input = normalize_vararg_double(input);
-    const bool negative = __builtin_signbit(input);
-    double value = negative ? -input : input;
-
-    if (__builtin_isnan(value)) {
-        emit_text(writer, uppercase ? "NAN" : "nan", false, plus, space,
-                  left, zero, width);
-        return;
-    }
-    if (__builtin_isinf(value)) {
-        emit_text(writer, uppercase ? "INF" : "inf", negative, plus, space,
-                  left, zero, width);
-        return;
-    }
-
-    if (!precision_specified)
-        precision = 6;
-    if (precision < 0)
-        precision = 0;
-
-    // A physical Edge FPR carries FP32 precision for D/S/H encodings.  Nine
-    // decimal fractional digits are therefore sufficient; wider requested
-    // precision is emitted as trailing zeroes.
-    const int calculated_precision = precision > 9 ? 9 : precision;
-    const uint64_t scale = decimal_scale((unsigned)calculated_precision);
-
-    // Keep debug formatting bounded to the integer range accepted by
-    // fcvt.lu.d.  D operations execute on the canonical FP32 FPR payload.
-    if (value >= 18446744073709551616.0) {
-        emit_text(writer, "<float-range>", negative, plus, space,
-                  left, zero, width);
-        return;
-    }
-
-    uint64_t whole = (uint64_t)value;
-    const double fraction = value - (double)whole;
-    uint64_t fractional =
-        (uint64_t)(fraction * (double)scale + 0.5);
-    if (fractional >= scale) {
-        fractional = 0;
-        ++whole;
-    }
-
-    char whole_digits[32];
-    const unsigned whole_count =
-        encode_decimal(whole_digits + sizeof(whole_digits), whole);
-    const bool decimal_point = precision != 0 || alternate;
-    const char sign = negative ? '-' : (plus ? '+' : (space ? ' ' : '\0'));
-    const int content_width = (sign != '\0') + (int)whole_count +
-                              (decimal_point ? 1 : 0) + precision;
-    int padding = width - content_width;
-    if (padding < 0)
-        padding = 0;
-
-    if (!left && !zero)
-        writer.repeat(' ', padding);
-    if (sign != '\0')
-        writer.put(sign);
-    if (!left && zero)
-        writer.repeat('0', padding);
-    emit_decimal_digits(writer, whole);
-    if (decimal_point)
-        writer.put('.');
-    emit_zero_padded_decimal(writer, fractional,
-                             (unsigned)calculated_precision);
-    writer.repeat('0', precision - calculated_precision);
-    if (left)
-        writer.repeat(' ', padding);
-}
-#else
 static inline float rv32_float_from_double_bits(uint64_t raw)
 {
     const uint32_t sign = (uint32_t)(raw >> 32) & 0x80000000u;
@@ -413,7 +298,6 @@ static inline void emit_fixed(Writer &writer, double input, bool uppercase,
     if (left)
         writer.repeat(' ', padding);
 }
-#endif
 
 } // namespace edge_sim_console_detail
 
@@ -550,7 +434,7 @@ static inline int edge_sim_vprintf(const char *format, va_list args)
         }
         case 'f':
         case 'F':
-#if !defined(__riscv) || !defined(__riscv_xlen) || __riscv_xlen != 32 || defined(__riscv_flen)
+#if defined(__riscv_flen)
             emit_fixed(writer, va_arg(ap, double), conversion == 'F',
                        alternate, plus, space, left, zero, width, precision,
                        precision_specified);

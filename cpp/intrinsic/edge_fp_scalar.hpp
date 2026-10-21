@@ -1,10 +1,9 @@
-#ifndef EDGE_LOWP_RV32_HPP
-#define EDGE_LOWP_RV32_HPP
+#ifndef EDGE_FP_SCALAR_HPP
+#define EDGE_FP_SCALAR_HPP
 
 #include <stdint.h>
 
-// Edge32 uses the same scalar FP4 move and FP8 memory encodings as the
-// earlier core. Keep these C++ wrappers available to RV32 examples.
+// Edge32 scalar FP4 conversion, FP8 memory access, and FP8/BF16 arithmetic.
 struct fp4x16_t {
     uint64_t data;
 };

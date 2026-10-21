@@ -11,13 +11,14 @@ of emitting instruction words or depending on `*_FUNCT7` and encoding macros.
 
 ## Requirements
 
-- Compile for the 64-bit RISC-V Edge target. These intrinsics contain custom
-  instructions and cannot execute on a normal host CPU.
-- Add `cpp` to the include path and include the header as shown below.
-- Prefer C++17 or newer. The basic platform, cache, DMA, BF16, and accelerator
-  command functions are C-readable, but template configuration, option forms,
-  circular-DMA overloads, accelerator result accessors, and numeric wrapper
-  types require C++.
+- Compile for the Edge32 target with `-march=rv32imf_zba -mabi=ilp32`.
+  These intrinsics contain custom instructions and cannot execute on a normal
+  host CPU.
+- Add `cpp` and `src/edge-32/include` to the include path and include the header
+  as shown below.
+- Use C++17 or newer. This header directly includes the public Edge32 C++
+  intrinsics and the FP4, FP8, and BF16 scalar helpers in
+  `edge_fp_scalar.hpp`.
 - Link with the Edge bare-metal linker script so that `EDGE_DTCM_BASE`,
   `EDGE_DTCM_SIZE`, and `EDGE_DTCM_MASK` resolve correctly.
 
@@ -135,9 +136,7 @@ length and an unaligned pointer: rounding can still select one cache line.
 formatter consumes the C variadic `double` argument and supports width, sign,
 zero padding, and precision. On RV32IMF, `soft_double.c` widens promoted FP32
 arguments to the `double` ABI; the formatter reads the IEEE64 bits and rounds
-to FP32 before decimal conversion. The earlier RV64 path uses D-encoded
-operations on its reduced-precision datapath. `%e` and `%g` remain diagnostic
-placeholders.
+to FP32 before decimal conversion. `%e` and `%g` remain diagnostic placeholders.
 | `edge_exit(return_value)` | Report a simulator return value, then remain in `wfi` forever |
 
 `edge_exit()` does not return. Applications normally use the repository's
