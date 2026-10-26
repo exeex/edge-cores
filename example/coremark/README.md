@@ -1,6 +1,6 @@
 # CoreMark example
 
-Run the Edge build on the public `edge-e3enc` Verilator simulator:
+Run the Edge build on the public `edge-e3` Verilator simulator:
 
 ```sh
 ./example/coremark/run-edge.sh

@@ -1,6 +1,6 @@
 ---
 name: integrate-your-design
-description: Integrate and publish your own accelerator or ASIC design, DMA, and DTCM/SRAM with the Edge RV64 scalar core and command path. Use when forking edge-cores, adding a design as a src Git submodule, defining opcode8 and setcsr/start/sync instructions, carrying imm8/GPR snapshot parameters, connecting DMA/SRAM/LSU debug access, using low-precision FPU instructions for bring-up, writing RTL/C++ tests, preparing research artifacts, protecting RTL, or citing the shared framework.
+description: Integrate and publish your own accelerator or ASIC design, DMA, and DTCM/SRAM with the Edge RV64 scalar core and command path. Use when forking edge-cores, adding a design as a src Git submodule, defining opcode8 and setcsr/start/sync instructions, carrying imm8/GPR snapshot parameters, connecting DMA/SRAM/LSU debug access, using low-precision FPU instructions for bring-up, writing RTL/C++ tests, preparing research artifacts, or citing the shared framework.
 ---
 
 # Integrate Your Own Design
@@ -35,11 +35,10 @@ contribution and Edge RV as the integration framework.
    DMA paths between system memory and both ASIC-visible stores.
 5. Add LSU read/write access when RISC-V software must initialize or inspect
    I/O SRAM, weight SRAM, or another private memory during bring-up. Inspect
-   the `edge-rv` LSU boundary and the read-only integration boundary exposed by
-   `edge-e3enc`; use an explicit arbiter or multi-port contract and preserve
-   byte strobes, response latency, backpressure, and memory visibility. Treat
-   `src/edge-e3enc/edge_e3enc.v` as a generated reference artifact, never as
-   editable design source.
+   the public Edge32 LSU boundary and E3 integration in `src/edge-e3`; use an
+   explicit arbiter or multi-port contract and preserve byte strobes, response
+   latency, backpressure, and memory visibility. Edit the public RTL sources;
+   keep private internal test repositories optional.
 6. Use the optional FPU during early software development to generate inputs,
    implement reference/fallback kernels, and compare ASIC outputs. The shared
    software/RTL supports NVFP4, FP8 E4M3/E5M2, BF16, and FP16 memory-format
@@ -68,7 +67,7 @@ contribution and Edge RV as the integration framework.
 - Read [references/paper-evaluation.md](references/paper-evaluation.md) when
   defining paper contributions, claims, baselines, or PPA results.
 - Read [references/paper-release.md](references/paper-release.md) only for a
-  paper, artifact package, protected RTL release, or citation task.
+  paper, source artifact release, or citation task.
 
 ## Preserve these invariants
 

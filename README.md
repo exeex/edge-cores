@@ -21,16 +21,16 @@ from the critical path and makes zero-day support for newly released Hugging
 Face models practical.
 
 The simpler toolchain does not come at the expense of accelerator utilization.
-The maintained [`example/tensor`](example/tensor/README.md) reaches **93.59%
+The maintained [`example/tensor`](example/tensor/README.md) reaches **94.84%
 effective MAC utilization** on a 64x64x128 BF16 matmul, including packed weight
 DMA, circular weight loads, Tensor execution, and synchronization.
 
-## Run Llama 3 and Qwen 3.6 on edge-e3enc ASIC RTL
+## Run Llama 3 and Qwen 3.6 on edge-e3 ASIC RTL
 
 The current public flow demonstrates a **single Llama 3 transformer block** and
 a **reduced single Qwen 3.6 full-attention decoder layer** running on the
-`edge-e3enc` ASIC RTL through Verilator. The simulator combines the encrypted
-e3 core, public Edge32 RTL, and SRAM boundary models from `edge-e3enc`. The
+`edge-e3` ASIC RTL through Verilator. The simulator builds the public E3, Edge32 and shared ASIC RTL directly,
+with local public SRAM behavioral models. The
 8x8 BF16 Tensor ASIC has 128 KB of DTCM. This MVP demonstrates the complete
 PyTorch-to-ASIC path with compact single-layer workloads.
 
@@ -48,6 +48,23 @@ First follow the
 [`edge-bringup`](.codex/skills/edge-bringup/SKILL.md) workflow. It installs the
 required public submodules and creates the repository-owned `.venv` used by the
 commands below.
+
+E3 RTL and the shared ASIC RTL are public in `src/edge-e3` and
+`src/edge-asic`; Edge32 is public in `src/edge-32`. Private repositories mainly
+contain internal tests such as `src/test-e3`. They are optional: the public
+build and examples do not require them. Public documentation and examples
+remain in this repository.
+
+NNC is pinned as the `src/edge-nnc` Git submodule, matching the compiler and
+C++ runtime used by n906. Initialize it before running the examples:
+
+```sh
+git submodule update --init src/edge-e3 src/edge-asic src/edge-32 src/edge-nnc
+```
+
+`nnc` and `cpp/libnn` are compatibility symlinks into that submodule.
+The workspace supplies Edge32 intrinsics and the public-source Verilator harness;
+`scripts/run-nnc.sh` connects these inputs to the shared runner.
 
 Run the Llama 3 block:
 
@@ -110,7 +127,7 @@ program.
 ### 3. Run it on the Verilated RTL
 
 After the initial setup, one command generates the code, builds the RV32 image,
-runs it on the `edge-e3enc` Verilator model, and compares the BF16 output
+runs it on the `edge-e3` Verilator model, and compares the BF16 output
 against PyTorch:
 
 ```sh
@@ -134,17 +151,17 @@ PyTorch model
     -> NNC graph lowering
     -> generated bare-metal C++
     -> RV32 ELF
-    -> Verilated edge-e3enc RTL
+    -> Verilated edge-e3 RTL
     -> BF16 comparison with PyTorch
 ```
 
 ## Choose Your Path
 
 The maintained Edge example run scripts use `scripts/build-verilator.sh`, which
-builds the `edge-e3enc` simulator. CoreMark also includes a separate C906 run
+builds the `edge-e3` simulator. CoreMark also includes a separate C906 run
 script for comparison.
 
-- **Run edge-e3enc:** build the encrypted Verilator model and execute the hello,
+- **Run edge-e3:** build the public-source Verilator model and execute the hello,
   tensor, and PyTorch-to-NNC examples.
 - **Integrate your own accelerator:** combine your RTL with `edge-32`, then
   define its instruction, memory, and verification paths.
@@ -196,7 +213,7 @@ The current reference composition includes:
 - DMA, activation(ACTU), comparison(CMPU), and cache-control interfaces
 
 Use edge-e3 as a working system reference, not as a required template. Its
-public boundaries and encrypted RTL demonstrate one integration while your
+public boundaries and public RTL demonstrate one integration while your
 design retains its own architecture, repository, and license.
 
 ## Bring Your Own Design
@@ -238,8 +255,8 @@ shared framework. They are reference products rather than limits on what
 
 | Product | Positioning | Tensor unit | DTCM | RTL availability |
 | --- | --- | ---: | ---: | --- |
-| `edge-e3` | Transformer and CNN classifiers | 8x8 | 128 KB | Encrypted RTL available; open release planned |
-| `edge-e4` | Compute-intensive workloads such as segmentation | 16x16 | 256 KB | Encrypted release planned |
+| `edge-e3` | Transformer and CNN classifiers | 8x8 | 128 KB | Public source RTL available |
+| `edge-e4` | Compute-intensive workloads such as segmentation | 16x16 | 256 KB | Release planned |
 | `edge-e5` | LLM inference with Q8/FP8 quantization | 32x32 | 512 KB | Not currently available |
 | `edge-p3` | Higher-throughput classifiers | 8x16 | 128 KB | Not currently open |
 | `edge-p4` | Higher-throughput segmentation | 16x32 | 256 KB | Not currently open |
@@ -274,7 +291,8 @@ The tensor example is the smallest end-to-end demonstration of these patterns.
 ## Performance Snapshot
 
 The Tensor result below comes from the maintained example on the current
-`edge-e3enc` RTL. The Activation results are historical RTL simulation
+`edge-e3` RTL (`5fc26eec`, Edge32 `f3648524`, shared ASIC `d751a2e5`).
+The Activation results are historical RTL simulation
 checkpoints. These are not silicon measurements.
 
 ### Tensor
@@ -285,7 +303,7 @@ circular weight loads:
 
 | Ideal MAC cycles | Measured `rdcycle` interval | Effective MAC utilization |
 | ---: | ---: | ---: |
-| 8,192 | 8,753 | **93.59%** |
+| 8,192 | 8,638 | **94.84%** |
 
 Effective MAC utilization is calculated as `ideal MAC cycles / cycle_delta`.
 The measured RTL interval starts before the packed weight DMA and ends
@@ -371,5 +389,5 @@ edge-e3 is source-available under the edge-e3 Hardware License 1.0 and is not
 OSI-approved open-source hardware.
 
 See [LICENSING.md](LICENSING.md) for the repository and submodule boundaries,
-and [`src/edge-e3enc/LICENSE.md`](src/edge-e3enc/LICENSE.md) for the complete
+and [`src/edge-e3/LICENSE.md`](src/edge-e3/LICENSE.md) for the complete
 edge-e3 terms.

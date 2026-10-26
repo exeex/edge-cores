@@ -1,6 +1,6 @@
 # FP8 and BF16 scalar debug
 
-Build and run the low-precision scalar example on the `edge-e3enc` simulator:
+Build and run the low-precision scalar example on the `edge-e3` simulator:
 
 ```sh
 ./example/fp8_bf16_debug/run.sh

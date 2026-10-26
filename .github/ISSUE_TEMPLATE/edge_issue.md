@@ -14,7 +14,7 @@ assignees: ""
 
 ## Affected area
 
-<!-- Examples: src/edge-rv, src/edge-e3enc, SoC, intrinsic, NNC, example, documentation, submodule integration. -->
+<!-- Examples: src/edge-rv, src/edge-e3, SoC, intrinsic, NNC, example, documentation, submodule integration. -->
 
 ## Revision and environment
 

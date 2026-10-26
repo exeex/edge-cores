@@ -1,6 +1,6 @@
 ---
 name: edge-tensor-example
-description: Build and run the public 64x64 x 128-token tiled circular tensor matmul example on the encrypted Edge Verilator simulator.
+description: Build and run the public 64x64 x 128-token tiled circular tensor matmul example on the public-source Edge Verilator simulator.
 ---
 
 # Tensor example workflow

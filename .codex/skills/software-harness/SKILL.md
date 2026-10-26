@@ -1,14 +1,14 @@
 ---
 name: software-harness
-description: Run, extend, debug, or review the public edge-e3 bare-metal software harness, including encrypted Verilator builds, hello and tensor examples, all example/llama/model smoke cases, PyTorch BF16 comparison, llama3_source.py per-node profiling, and regression reports. Use after changes to cpp, nnc, example software, public SoC testbench output/dump behavior, or encrypted-core software execution.
+description: Run, extend, debug, or review the public edge-e3 bare-metal software harness, including public-source Verilator builds, hello and tensor examples, all example/llama/model smoke cases, PyTorch BF16 comparison, llama3_source.py per-node profiling, and regression reports. Use after changes to cpp, nnc, example software, public SoC testbench output/dump behavior, or public E3 software execution.
 ---
 
 # Software Harness
 
-Use only the public encrypted-core path. Keep `src/edge-e3` and `src/edge-asic`
-deinitialized while validating the public harness; `scripts/build-verilator.sh`
-must obtain the private product RTL and SRAM models exclusively from
-`src/edge-e3enc`.
+Use the public E3, Edge32 and shared ASIC RTL through
+`scripts/build-verilator.sh`. Private test repositories such as `src/test-e3`
+are optional; do not copy them into this public flow. SRAM simulation models
+are provided locally under `src/soc/logical/mem`.
 
 ## Select the validation scope
 
@@ -26,7 +26,7 @@ Install the Python dependency from `nnc/requirements.txt` when needed.
 
 ## Run the complete public regression
 
-Verify both private source submodules are absent, then run:
+Initialize the public RTL and NNC submodules, then run:
 
 ```sh
 git submodule status src/edge-e3
@@ -37,14 +37,14 @@ python3 -m unittest nnc.test_compiler
 ./example/llama/test.sh
 ```
 
-Both submodule status lines must begin with `-`. Do not initialize private RTL
-to make a public case pass.
+Require the public RTL submodules to be initialized at their pinned commits.
+The public regression must not require private test repositories.
 
 ## Llama suite contract
 
 `example/llama/test.sh` must:
 
-- build one suite-private simulator below `example/llama/build/harness/verilator`;
+- build the workspace simulator once, then reuse it for each model;
 - discover every `nnc/test/smoke_*.py` without a skip list;
 - run each model in an isolated Python process and compare its BF16 output with
   the PyTorch golden;
@@ -65,12 +65,12 @@ lowering and memory rules.
 The Llama suite succeeds only when `harness.md` reports every discovered case
 as PASS. Inspect these artifacts:
 
-- `example/llama/build/harness/harness.md`: human-readable suite summary.
-- `example/llama/build/harness/harness.tsv`: machine-readable summary.
-- `example/llama/build/harness/<model>.log`: complete per-model output.
-- `example/llama/build/llama3_source/profile.md`: ranked node cycles and share.
-- `example/llama/build/llama3_source/profile.tsv`: machine-readable profile.
-- `example/llama/build/llama3_source/software-console.log`: raw records.
+- `src/edge-nnc/example/llama/build/harness/harness.md`: human-readable suite summary.
+- `src/edge-nnc/example/llama/build/harness/harness.tsv`: machine-readable summary.
+- `src/edge-nnc/example/llama/build/harness/<model>.log`: complete per-model output.
+- `src/edge-nnc/example/llama/build/llama3_source/profile.md`: ranked node cycles and share.
+- `src/edge-nnc/example/llama/build/llama3_source/profile.tsv`: machine-readable profile.
+- `src/edge-nnc/example/llama/build/llama3_source/software-console.log`: raw records.
 
 Treat profile percentages as shares of summed measured operator calls, not full
 simulation cycles. Allocation, copies, startup, and printf are excluded.
@@ -81,8 +81,9 @@ simulation cycles. Allocation, copies, startup, and printf are excluded.
 2. Reproduce one model with `nnc/run_smoke.py --model-file ...`.
 3. Distinguish export/lowering, RISC-V build, simulator, return status, and BF16
    comparison failures.
-4. For a missing simulator during a suite, verify the suite-private path; do
-   not share `build/verilator/obj` across concurrent harnesses.
+4. For a missing simulator, verify the workspace build path. Set a distinct
+   `EDGE_VERILATOR_OUT` for concurrent harnesses; never rebuild the same output
+   directory concurrently.
 5. After fixing one case, rerun the complete suite because tensor layout and
    allocator changes commonly affect composed paths.
 

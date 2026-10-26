@@ -13,7 +13,7 @@ multiple rows.
 | C++ intrinsic or bare-metal runtime | Relevant example plus hello; inspect emitted instruction encoding when changed |
 | NNC compiler lowering | `python3 -m unittest nnc.test_compiler` and the affected smoke model |
 | NNC runtime, tensor layout, allocator, DMA layout, or composed model | Python unit tests and `./example/llama/test.sh` |
-| Release packaging or encrypted public consumer | Public build and examples with private source submodules deinitialized |
+| Public RTL source integration | Public build and examples without private test repositories |
 
 ## Full public regression
 
@@ -29,7 +29,8 @@ python3 -m unittest nnc.test_compiler
 ./example/llama/test.sh
 ```
 
-Require `src/edge-e3` status to begin with `-`. Inspect each generated report
+Require `src/edge-e3`, `src/edge-32` and `src/edge-asic` to be initialized at
+their pinned commits. Private test repositories remain optional. Inspect each generated report
 for `TEST PASS`; a zero shell exit alone is insufficient when a harness writes
 a separate report.
 

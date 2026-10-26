@@ -5,7 +5,7 @@ claiming a fresh test or benchmark result.
 
 ## How do I run the edge-e3 RTL smoke tests?
 
-Install the host dependencies, initialize `src/edge-e3enc`, then run:
+Install the host dependencies, initialize `src/edge-e3`, `src/edge-32` and `src/edge-asic`, then run:
 
 ```sh
 ./scripts/build-verilator.sh
@@ -40,17 +40,17 @@ can run unchanged.
 
 ## Add llama.cpp Q4_K_M support to the tensor unit and NNC runtime
 
-This requires editable, non-encrypted tensor RTL in `src/edge-e3`. That source
-is not yet part of the public development flow, so this work cannot be completed
-against only `src/edge-e3enc`. The planned formal release of the non-encrypted
-`src/edge-e3` source is early 2027. Until then, describe the dependency and do
-not attempt to patch, reverse, or work around the encrypted core.
+E3 RTL is public in `src/edge-e3`, with reusable datapaths in `src/edge-asic`
+and compiler/runtime code in `src/edge-nnc`. Q4_K_M still requires its own
+format decoding, hardware mapping, lowering and correctness work; existing
+FP4 support does not establish Q4_K_M support. Define a reduced golden model,
+implement the affected layers, then run compiler and RTL regressions.
 
 ## I want to add <feature>. Where should I start, and which tests should I run?
 
-If the feature changes core or accelerator RTL, it likewise requires the
-non-encrypted `src/edge-e3`, planned for formal release in early 2027; explain
-that boundary first. If the feature is confined to currently editable public
-software, NNC, SoC integration, scripts, or examples, identify the owning files
-and select tests from `software-harness` and `llama-nnc`. Never promise that a
-core-RTL feature can be implemented through the encrypted netlist.
+For RTL features, start in public `src/edge-e3`, `src/edge-asic` or
+`src/edge-32`, depending on ownership. For compiler/runtime changes, work in
+`src/edge-nnc` through the `nnc` and `cpp/libnn` compatibility paths. Select
+public examples and NNC tests from `software-harness` and `llama-nnc`.
+Private test repositories such as `src/test-e3` remain optional and should not
+be copied into the public workspace.

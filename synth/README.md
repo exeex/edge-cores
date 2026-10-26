@@ -14,14 +14,14 @@ Profiles:
 
 | Profile | Top | RTL selection |
 | --- | --- | --- |
-| `edge32@e3` | `edge_core_edge32_top` | `src/edge-e3enc/edge_e3enc_mixed.fl` |
+| `edge32@e3` | `edge_core_edge32_top` | public E3 filelist resolved by `tools/prepare_e3_filelist.py` |
 | `edge-32` | `edge_32_cached_core` | public Edge32 cached-core boundary |
 | `edge-rv` | `edge_rv_top` | public edge-rv resource boundary |
 | `edge-rv-lite` | `edge_rv_lite_cached_core` | public cached rv-lite boundary |
 
 The naming convention is `<scalar-core>@<asic-set>`. The `edge32@e3` profile
-uses only the generated `edge-e3enc` package; it never falls back to private
-`src/edge-e3` RTL.
+uses public `src/edge-e3`, `src/edge-32` and `src/edge-asic` RTL, with local
+SRAM behavioral models. It does not require private test repositories.
 
 The `edge-rv` and `edge-rv-lite` profiles need their former source trees, which
 are no longer submodules of this checkout. Set `EDGE_RV_ROOT` and, for lite,

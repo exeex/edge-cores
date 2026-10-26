@@ -6,9 +6,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 OUT_DIR="${EDGE_VERILATOR_OUT:-${REPO_ROOT}/build/verilator}"
 OBJ_DIR="${OUT_DIR}/obj"
 VERILATOR_BIN="${VERILATOR:-verilator}"
-CORE_RTL="${REPO_ROOT}/src/edge-e3enc/edge_e3enc.v"
-PUBLIC_FILELIST="${REPO_ROOT}/src/edge-e3enc/edge32_public.fl"
-SRAM_FILELIST="${REPO_ROOT}/src/edge-e3enc/edge_e3enc_sram.fl"
+PUBLIC_FILELIST="${OUT_DIR}/edge_e3_public.fl"
 SIM_EXE="${OBJ_DIR}/Vedge_soc_demo_tb"
 
 if ! command -v "${VERILATOR_BIN}" >/dev/null 2>&1; then
@@ -17,9 +15,6 @@ if ! command -v "${VERILATOR_BIN}" >/dev/null 2>&1; then
 fi
 
 required=(
-    "${CORE_RTL}"
-    "${PUBLIC_FILELIST}"
-    "${SRAM_FILELIST}"
     "${REPO_ROOT}/src/soc/logical/tb/edge_soc_demo_tb.v"
     "${REPO_ROOT}/src/soc/logical/common/edge_soc_top.v"
     "${REPO_ROOT}/src/soc/logical/axi/edge_axi_interconnect.v"
@@ -33,31 +28,8 @@ for path in "${required[@]}"; do
     fi
 done
 
-while IFS= read -r relative_path; do
-    [[ -z "${relative_path}" || "${relative_path}" == \#* ]] && continue
-    if [[ "${relative_path}" != src/edge-e3enc/* ]]; then
-        echo "error: SRAM filelist contains a source outside edge-e3enc: ${relative_path}" >&2
-        exit 1
-    fi
-    if [[ ! -f "${REPO_ROOT}/${relative_path}" ]]; then
-        echo "error: SRAM model is missing: ${REPO_ROOT}/${relative_path}" >&2
-        echo "hint: edge-e3enc must include its public SRAM boundary models" >&2
-        exit 1
-    fi
-done < "${SRAM_FILELIST}"
-
-while IFS= read -r relative_path; do
-    [[ -z "${relative_path}" || "${relative_path}" == \#* ]] && continue
-    if [[ "${relative_path}" != src/edge-32/* ]]; then
-        echo "error: public RTL filelist contains a non-Edge32 source: ${relative_path}" >&2
-        exit 1
-    fi
-    if [[ ! -f "${REPO_ROOT}/${relative_path}" ]]; then
-        echo "error: public Edge32 RTL is missing: ${REPO_ROOT}/${relative_path}" >&2
-        echo "hint: initialize the src/edge-32 submodule" >&2
-        exit 1
-    fi
-done < "${PUBLIC_FILELIST}"
+# Resolve only public RTL and local SRAM models, never private test sources.
+python3 "${REPO_ROOT}/tools/prepare_e3_filelist.py" --output "${PUBLIC_FILELIST}"
 
 mkdir -p "${OUT_DIR}"
 rm -rf "${OBJ_DIR}"
@@ -82,8 +54,6 @@ cd "${REPO_ROOT}"
     "${REPO_ROOT}/src/soc/logical/axi/edge_axi_interconnect.v" \
     "${REPO_ROOT}/src/soc/logical/mem/edge_axi_ram.v" \
     "${REPO_ROOT}/src/soc/logical/axi/edge_axi_err.v" \
-    -f "${PUBLIC_FILELIST}" \
-    "${CORE_RTL}" \
-    -f "${SRAM_FILELIST}"
+    -f "${PUBLIC_FILELIST}"
 
 echo "Built ${SIM_EXE}"

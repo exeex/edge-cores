@@ -1,7 +1,7 @@
 # ACTU throughput example
 
 This bare-metal example measures 4,096-element sigmoid, SiLU, tanh, and
-three-pass softmax pipelines on the public `edge-e3enc` simulator. Each kernel
+three-pass softmax pipelines on the public `edge-e3` simulator. Each kernel
 runs once to warm the instruction path, then a second time at the same address;
 only the second `start`-through-`sync` interval is reported. Input preparation
 and BF16 result validation are outside the timing window.
@@ -12,7 +12,7 @@ Build only the software image:
 ./example/actu/build.sh
 ```
 
-Build the encrypted-core Verilator simulator and run the example:
+Build the public-source Verilator simulator and run the example:
 
 ```sh
 ./example/actu/run.sh

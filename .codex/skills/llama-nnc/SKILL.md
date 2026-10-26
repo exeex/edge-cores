@@ -1,12 +1,20 @@
 ---
 name: llama-nnc
-description: Develop and profile the edge-e3 PyTorch-to-NNC flow, including nnc/compiler.py lowering and generated ABI, example/llama smoke models, cpp/libnn runtime operators, BF16 correctness checks, and per-node cycle reports on the encrypted Verilator core.
+description: Develop and profile the edge-e3 PyTorch-to-NNC flow, including nnc/compiler.py lowering and generated ABI, example/llama smoke models, cpp/libnn runtime operators, BF16 correctness checks, and per-node cycle reports on the public E3 Verilator core.
 ---
 
 # Llama NNC
 
 Keep this repository's NNC path bare-metal-only and runnable with the public
-encrypted core.
+public E3 RTL.
+
+The compiler and matched runtime are maintained in the `src/edge-nnc`
+submodule. Initialize it with `git submodule update --init src/edge-nnc`.
+`nnc` and `cpp/libnn` are compatibility symlinks; edits through them modify
+that submodule. Keep its compiler/runtime pair pinned together. Workspace
+shell entry points use `scripts/run-nnc.sh` to supply Edge32 and simulator
+inputs. Direct runner calls need `--edge32-include` and `--sim-exe` (unless
+`--build-only`); use the shell wrappers for the public workspace defaults.
 
 ## Read first
 
@@ -33,7 +41,7 @@ For a semantic operator change:
    where needed.
 3. Render its C++ call in `nnc/codegen.py`'s `ForwardRenderer`.
 4. Implement it in `cpp/libnn/<op>.hpp` and expose it from `cpp/libnn/ops.hpp`.
-5. Run the compiler tests and the smallest relevant encrypted-core smoke.
+5. Run the compiler tests and the smallest relevant public-source smoke.
 
 ```sh
 python3 -m unittest nnc.test_compiler
@@ -79,7 +87,7 @@ for node-level reports.
 
 Require all of these results:
 
-- encrypted Verilator exits with `TEST PASS`;
+- public E3 Verilator exits with `TEST PASS`;
 - all output BF16 values match the PyTorch golden within the runner tolerance;
 - `profile.md` and `profile.tsv` exist beside the ELF;
 - `software-console.log` retains the raw profile records.
@@ -104,4 +112,4 @@ The suite must cover every `nnc/test/smoke_*.py` file and finish by profiling
 `example/llama/model/llama3_source.py`. Require `harness.md` to report every row
 as PASS; do not maintain a silent skip list.
 
-Generated files belong under `example/llama/build/` and must remain untracked.
+Generated files belong under `example/llama/build/` or the shared harness's `src/edge-nnc/example/llama/build/` and must remain untracked.

@@ -104,7 +104,8 @@ extern "C" int main(void)
         dtcm->zero[idx].value = 0;
     }
 
-    edge_tensor_setcsr<bfloat16_t, int8_t>();
+    // E3 BF16 P/O storage uses dtype=0; the typed BF16 CSR selects dtype=1.
+    edge_tensor_setwtype<EDGE_TENSOR_WTYPE_INT8>();
     edge_tensor_setn(MM64_SETN);
 
     uintptr_t cycle_start = edge_get_cycle();

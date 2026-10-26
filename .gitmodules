@@ -16,7 +16,7 @@
 	url = https://github.com/exeex/edge-32.git
 [submodule "src/edge-asic"]
 	path = src/edge-asic
-	url = git@github.com:exeex/edge-asic.git
-[submodule "src/edge-e3enc"]
-	path = src/edge-e3enc
-	url = git@github.com:exeex/edge-e3enc.git
+	url = https://github.com/exeex/edge-asic.git
+[submodule "src/edge-nnc"]
+	path = src/edge-nnc
+	url = https://github.com/exeex/edge-nnc.git

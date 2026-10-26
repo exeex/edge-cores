@@ -1,26 +1,26 @@
 ---
 name: edge-verilator-demo
-description: Build or debug the public Edge SoC Verilator demo that uses only src/edge-e3enc/edge_e3enc.v as its core RTL input.
+description: Build or debug the public Edge SoC Verilator demo using the public E3, Edge32 and shared ASIC RTL sources.
 ---
 
-# Encrypted Edge Verilator demo
+# Public Edge Verilator demo
 
 Use `scripts/build-verilator.sh` as the maintained simulator build entry point.
-The core RTL input must remain `src/edge-e3enc/edge_e3enc.v`; do not silently
-switch the public flow back to files under private `src/edge-e3` or
-`src/edge-asic`.
+Initialize `src/edge-e3`, `src/edge-32` and `src/edge-asic`. E3 RTL is public;
+private test repositories such as `src/test-e3` are optional and must not be
+required by the public build. Do not copy internal test suites into this repo.
 
-The SoC wrapper and testbench live under `src/soc`. Public SRAM boundary models
-live under `src/edge-e3enc/sram` and are listed by
-`src/edge-e3enc/edge_e3enc_sram.fl`. The build must not read `src/edge-e3`
-or `src/edge-asic`; keep failures about missing encrypted RTL, SoC files, or
-SRAM models explicit.
+`tools/prepare_e3_filelist.py` resolves the upstream E3 filelist to public RTL
+inputs and replaces its internal test-model reference with the local public
+SRAM behavioral model in `src/soc/logical/mem/edge_sram_sim.v`. The generated
+filelist belongs under the ignored simulator build directory. Keep the SoC
+wrapper and testbench under `src/soc`. Build directly from the public source
+filelist.
 
-Validate changes by running:
+Validate with `./scripts/build-verilator.sh`, hello, tensor and ACTU examples.
+For compiler/runtime or accelerator changes, also run the complete NNC suite.
+Inspect `TEST PASS` and BF16 comparison results, not just shell exit codes.
 
-```sh
-./scripts/build-verilator.sh
-```
-
-The expected executable is `build/verilator/obj/Vedge_soc_demo_tb` unless
-`EDGE_VERILATOR_OUT` overrides the build directory.
+The executable is `build/verilator/obj/Vedge_soc_demo_tb` unless
+`EDGE_VERILATOR_OUT` overrides the build directory. Never rebuild the same
+simulator directory concurrently.

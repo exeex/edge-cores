@@ -9,7 +9,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 case "${PROFILE}" in
-  edge32@e3) TOP=edge_core_edge32_top; FLIST=src/edge-e3enc/edge_e3enc_mixed.fl ;;
+  edge32@e3)
+    TOP=edge_core_edge32_top
+    FLIST="${SCRIPT_DIR}/build/filelists/edge_e3_public.fl"
+    python3 "${ROOT_DIR}/tools/prepare_e3_filelist.py" --output "${FLIST}"
+    ;;
   edge-32) TOP=edge_32_cached_core; FLIST=src/edge-32/filelists/edge_32.fl ;;
   edge-rv) TOP=edge_rv_top; FLIST=synth/filelists/edge_rv.fl ;;
   edge-rv-lite) TOP=edge_rv_lite_cached_core; FLIST="${EDGE_RV_LITE_ROOT:-${ROOT_DIR}/src/edge-rv-lite}/filelists/edge_rv_lite.fl" ;;

@@ -75,13 +75,12 @@ Initialize only required public submodules:
 
 ```sh
 git submodule update --init \
-  src/edge-e3enc src/edge-32 third_party/coremark third_party/openc906
+  src/edge-e3 src/edge-asic src/edge-32 src/edge-nnc third_party/coremark third_party/openc906
 ./scripts/setup-python.sh
 ```
 
-Keep `src/edge-e3` and `src/edge-asic` deinitialized for the public flow.
-Never initialize or use a private/non-public checkout merely to make a public
-test pass.
+E3, Edge32 and shared ASIC RTL are public. Private repositories mainly contain
+internal tests such as `src/test-e3`; the public build does not require them.
 
 `scripts/setup-python.sh` selects one mutually exclusive PyTorch extra from
 `pyproject.toml` and runs `uv sync`:
@@ -117,8 +116,8 @@ long build. Then use the maintained specialist skill:
 - Edge versus C906 benchmark: `edge-tensor-example` CoreMark comparison flow.
 - Supported PyTorch/NNC model smoke: `llama-nnc` and `software-harness`.
 - Tensor or NNC feature implementation requiring editable RTL: explain the
-  public-source availability boundary from the reference instead of attempting
-  encrypted RTL edits.
+  owning public RTL modules and validate through public examples; keep internal
+  test repositories optional.
 
 Do not imply that an arbitrary Hugging Face checkpoint is already accepted by
 the NNC compiler. Distinguish the available small PyTorch-export smoke flow from
@@ -143,7 +142,7 @@ For Python/NNC work, additionally run:
 PYTHON=.venv/bin/python ./example/llama/run.sh
 ```
 
-Bring-up is successful when the private `src/edge-e3` status begins with `-`,
+Bring-up is successful when the public RTL submodules are initialized,
 the environment checker passes, the simulator builds, hello and tensor report
 `TEST PASS`, compiler unit tests pass, and the single Llama smoke reports both
 `TEST PASS` and `COMPARE PASS`. Keep all generated ELF, memory images, logs, and

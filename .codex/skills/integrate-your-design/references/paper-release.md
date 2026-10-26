@@ -7,45 +7,27 @@ from the downstream paper's contribution claims.
 ## Contents
 
 - [Choose a release form](#choose-a-release-form)
-- [Protect proprietary RTL](#protect-proprietary-rtl)
+- [Keep internal tests private](#keep-internal-tests-private)
 - [Build the artifact](#build-the-artifact)
 - [Cite edge-cores](#cite-edge-cores)
 
 ## Choose a release form
 
-Choose one of these forms explicitly:
+Publish the custom ASIC RTL as source when redistribution is authorized.
+Include public Edge RTL through its pinned repositories and retain every
+applicable license. If RTL redistribution is not authorized, publish only the
+permitted software traces or results and state the reproduction limitation.
 
-1. Publish the custom ASIC RTL as source when disclosure is acceptable.
-2. Publish a mixed package containing unchanged public Edge RV64 RTL and
-   obfuscated proprietary ASIC RTL when reviewers need simulation and
-   reproduction but source disclosure would compromise later publication or
-   commercialization.
-3. Publish only software traces or results when RTL redistribution is not
-   authorized; state that limitation clearly and do not call the artifact
-   fully reproducible.
+E3, Edge32 and shared ASIC RTL use the public source flow. Build directly from
+their declared filelists and the workspace's SRAM behavioral models.
 
-Prefer the least restrictive form permitted by the authors' disclosure and
-license constraints. Never obfuscate merely to conceal missing evidence.
+## Keep internal tests private
 
-## Protect proprietary RTL
-
-Use the `rtl-release-packager` skill. Keep the public/private ABI stable and
-leave public RTL dependencies unchanged. Generate the protected artifact from
-the authorized private tree into a separate output or release submodule.
-
-Require all of the following before release:
-
-- no private source path contents, symbol mapping, credentials, or unlicensed
-  dependency in the package;
-- deterministic manifest and hashes;
-- successful source, mixed-boundary, and SoC elaboration;
-- successful public consumer smoke tests without private submodules; and
-- reviewed license and attribution files.
-
-Describe the result as symbol-obfuscated or protected RTL. Do not claim
-cryptographic secrecy or guaranteed resistance to reverse engineering or AI
-analysis unless a separately audited encryption mechanism supports that
-claim.
+Private repositories mainly contain internal test suites such as `src/test-e3`.
+Do not copy those suites, private paths, credentials or unlicensed dependencies
+into the public artifact. Supply public examples and expected results that
+validate the published interface without requiring private tests. Public
+source availability does not authorize publishing internal test material.
 
 ## Build the artifact
 
@@ -55,7 +37,7 @@ Include:
 - exact edge-cores commit or release tag;
 - intrinsic header and example program using `set_*`, `start`, and final
   `sync`;
-- RTL/filelist or protected RTL manifest;
+- public RTL revisions and filelists;
 - scripts for functional tests and benchmark reproduction;
 - expected checksums and concise expected output;
 - workload shapes, clock assumption, cycle-count boundaries, and whether
@@ -63,8 +45,9 @@ Include:
 - a license and attribution statement for edge-cores and every redistributed
   dependency.
 
-Verify the artifact from a clean checkout with private source deinitialized.
-Do not report the private build as evidence that the public package works.
+Verify the artifact from a clean checkout using the declared public source
+dependencies and without private test repositories. Report only the checks
+actually run from that checkout.
 
 ## Cite edge-cores
 

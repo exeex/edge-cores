@@ -16,8 +16,9 @@ tested, reviewable pull requests.
 3. Create a focused branch from current `upstream/main`.
 4. Keep unrelated changes out of the branch. Never commit build products,
    private RTL, credentials, or generated reports.
-5. Modify public source and tests. Preserve existing public/private boundaries;
-   do not edit generated `src/edge-e3enc/edge_e3enc.v` as design source.
+5. Modify public RTL in `src/edge-e3`, `src/edge-32` or `src/edge-asic`.
+   Private repositories mainly hold internal tests such as `src/test-e3`;
+   preserve that boundary and keep the public build independent of them.
 6. Rebase or merge current `upstream/main`, rerun affected tests, push the
    branch, and open a pull request against `exeex/edge-cores:main`.
 
@@ -28,7 +29,7 @@ implementation steps when requested.
 ## File every issue in edge-cores
 
 Open all project issues at `https://github.com/exeex/edge-cores/issues`, even
-when the affected code lives in `src/edge-rv`, `src/edge-e3enc`, another
+when the affected code lives in `src/edge-e3`, `src/edge-nnc`, another
 submodule, an example, or the software stack. Do not split community discussion
 across submodule issue trackers.
 
@@ -75,7 +76,7 @@ For changes to public `src/edge-rv` RTL, run at least:
 
 Add compiler/runtime and Llama regressions when those surfaces are affected.
 Do not write “all tests pass” unless the listed commands actually completed
-successfully. Do not initialize private RTL to make a public regression pass.
+successfully. Do not require private test repositories to make a public regression pass.
 
 ## Write the pull request
 

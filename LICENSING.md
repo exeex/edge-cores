@@ -12,9 +12,11 @@ particular:
 | Path | License |
 | --- | --- |
 | `src/edge-rv` | CERN Open Hardware Licence Version 2 - Permissive (`CERN-OHL-P-2.0`) |
+| `src/edge-nnc` (also `nnc`, `cpp/libnn`) | Apache-2.0 |
 | `src/edge-32` | CERN Open Hardware Licence Version 2 - Permissive (`CERN-OHL-P-2.0`) |
-| `src/edge-e3`, `src/edge-e3enc` | edge-e3 Hardware License 1.0 |
-| `src/test-e3`, `src/test-rv` | License declared by the corresponding repository |
+| `src/edge-e3` | edge-e3 Hardware License 1.0 |
+| `src/edge-asic` | Applicable Edge product source license; see its LICENSE.md |
+| `src/test-e3`, `src/test-rv` (optional private tests) | License declared by the corresponding repository |
 | `third_party/coremark`, `third_party/openc906` | Upstream project license |
 
 A root checkout does not relicense submodule contents. When redistributing a

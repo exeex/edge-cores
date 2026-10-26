@@ -3,9 +3,10 @@
 This example exports the tiny Llama 3 transformer block in
 `model/llama3_source.py`, lowers it through `nnc/compiler.py`,
 links the generated weights and example inputs into a bare-metal RISC-V image, and checks the
-`edge-e3enc` Verilator output against PyTorch.
+`edge-e3` Verilator output against PyTorch.
 
 ```sh
+git submodule update --init src/edge-e3 src/edge-asic src/edge-32 src/edge-nnc
 ./scripts/setup-python.sh
 PYTHON=.venv/bin/python ./example/llama/run.sh
 ```
@@ -14,6 +15,16 @@ Pass another model with `--model-file`, or generate and build without running
 the simulator with `./example/llama/build.sh`. Compiler regression models live
 under `nnc/test/`; this example intentionally contains only the user-facing
 Llama source model.
+
+The compiler and matched C++ runtime live in the `src/edge-nnc` submodule.
+The root `nnc` and `cpp/libnn` paths are compatibility symlinks. The shell
+entry points use `scripts/run-nnc.sh` to provide this workspace's Edge32
+include directory, simulator executable, and simulator build script.
+Pass `--skip-verilator-build` to reuse an existing simulator for a single model.
+
+The n906-aligned compiler/runtime and public E3 RTL support the FP4/WSLD
+fixtures. See `src/edge-nnc/FP4_LINEAR.md` for their hardware contract.
+Private hardware regression repositories are not required by this example.
 
 The repository setup selects CPU or a compatible NVIDIA CUDA PyTorch build and
 syncs the locked `.venv`. Set `PYTHON=/path/to/python` only when intentionally
@@ -37,11 +48,14 @@ profiling case:
 ./example/llama/test.sh
 ```
 
-The suite writes its summary to `example/llama/build/harness/harness.md` and
-keeps one log per model in the same directory.
+The suite writes its summary to
+`src/edge-nnc/example/llama/build/harness/harness.md` and
+keeps one log per model in the same directory. Suite model binaries and the
+Llama profile are generated under `src/edge-nnc/example/llama/build/`; single
+model commands retain `example/llama/build/<model>/`.
 
-Generated headers, weights, binaries, and logs are written below
-`example/llama/build/` and are not source files.
+Generated headers, weights, binaries, and logs are written below the build
+directories above and are ignored by Git.
 
 The compiler is split by responsibility: `nnc/graph.py` reads the PyTorch
 export and forward ABI, `nnc/lowering.py` maps graph operations to kernels,

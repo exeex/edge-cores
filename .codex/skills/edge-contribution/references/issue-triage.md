@@ -1,7 +1,7 @@
 # Central issue triage
 
 Use `https://github.com/exeex/edge-cores/issues` as the single community issue
-tracker. Do not redirect reporters to `src/edge-rv`, `src/edge-e3enc`, test, or
+tracker. Do not redirect reporters to `src/edge-rv`, `src/edge-e3`, test, or
 third-party submodule trackers. Record the affected submodule or component as
 issue metadata while keeping discussion in edge-cores.
 

@@ -1,6 +1,6 @@
 # FP4 debug
 
-Build and run a small C++ example on `edge-e3enc` that computes FP32 values,
+Build and run a small C++ example on `edge-e3` that computes FP32 values,
 packs them as sixteen E2M1 FP4 nibbles in `fp4x16_t`, and reads them back for
 printing:
 

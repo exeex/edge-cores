@@ -1,6 +1,6 @@
 ---
 name: edge-synth-report
-description: Run and diagnose the repository-local Yosys synthesis profiles for edge-e3 encrypted product RTL, edge-rv, and edge-rv-lite, then summarize FPGA resource reports.
+description: Run and diagnose the repository-local Yosys synthesis profiles for public edge-e3 product RTL, edge-rv, and edge-rv-lite, then summarize FPGA resource reports.
 ---
 
 # Edge Synth Report
@@ -11,12 +11,10 @@ and resource comparisons. The maintained entry point is
 
 ## Profiles
 
-- `edge-rv@e3`: full product, top `edge_core_top`, using only the encrypted
-  product release plus its public filelist through
-  `src/edge-e3enc/edge_e3enc_mixed.fl`.
-- `edge-rv-lite@e3`: reserved full-product lite profile. It must fail clearly
-  until `src/edge-e3enc/edge_e3enc.v` exports `edge_core_lite_top`. Never fall
-  back to private `src/edge-e3` sources.
+- `edge32@e3`: full public E3 product, top `edge_core_edge32_top`. The
+  profile resolves the public E3 filelist through `tools/prepare_e3_filelist.py`
+  and supplies local public SRAM behavioral models. Private tests are optional.
+- `edge-32`: standalone public cached-core boundary, top `edge_32_cached_core`.
 - `edge-rv`: reusable public RV resource boundary, top `edge_rv_top`.
 - `edge-rv-lite`: public cached lite boundary, top
   `edge_rv_lite_cached_core`.
