@@ -16,6 +16,18 @@ _start:
     la      gp, __global_pointer$
     la      sp, __stack_top
 
+    /* Copy initialized C/C++ data from its ROM load image to writable RAM. */
+    la      t0, __data_load_start
+    la      t1, __data_start
+    la      t2, __data_end
+.Lcopy_data:
+    bgeu    t1, t2, .Ldata_ready
+    lw      t3, 0(t0)
+    sw      t3, 0(t1)
+    addi    t0, t0, 4
+    addi    t1, t1, 4
+    j       .Lcopy_data
+.Ldata_ready:
     la      t0, __bss_start
     la      t1, __bss_end
 1:

@@ -1,5 +1,5 @@
 // Integration sentinel: use the pinned libnn directly, without NNC lowering.
-#include "libnn/matmul.hpp"
+#include "libnn/ops.hpp"
 
 using Bf16 = nnedge::bfloat16_t;
 using nnedge::Shape;

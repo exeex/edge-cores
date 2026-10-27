@@ -10,8 +10,8 @@ case "${group}" in
         printf '%s\n' \
             'nnc-unit: NNC-owned Python compiler and FP4 tests' \
             'nnc: NNC unit tests + all model smokes + Llama profile (workspace RTL adapter)' \
-            'interface: standalone libnn/matmul.hpp against workspace intrinsics and public RTL' \
-            'examples: hello, tensor, ACTU, FP4 and FP8/BF16 demonstrations' \
+            'interface: standalone NNC matmul via libnn/ops.hpp against workspace intrinsics and public RTL' \
+            'examples: hello, tensor, ACTU, scalar FP4/FP8 and packed Tensor formats' \
             'all: nnc + interface + examples' \
             'benchmark (separate): example/coremark/run-edge.sh and run-c906.sh'
         exit 0 ;;
@@ -37,7 +37,7 @@ if [[ "${group}" == all ]]; then
     run_case nnc "${SCRIPT_DIR}/nnc/run.sh"
     run_case interface "${SCRIPT_DIR}/interface/run.sh"
 fi
-for name in hello tensor actu fp4_debug fp8_bf16_debug; do
+for name in hello tensor actu fp4_debug fp8_bf16_debug tensor_formats; do
     run_case "${name}" "${REPO_ROOT}/example/${name}/run.sh"
 done
 echo "Report: ${OUT_DIR}/summary.tsv"

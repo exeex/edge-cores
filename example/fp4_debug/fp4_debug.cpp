@@ -1,4 +1,3 @@
-#include "intrinsic/edge_sim_console.hpp"
 #include "intrinsic/edge_intrinsic.hpp"
 
 static void print_fp4_value(float value)

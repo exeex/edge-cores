@@ -18,7 +18,12 @@ Llama source model. The model and `src/smoke_main.cpp` are symlinks into the
 NNC submodule, which owns their implementation.
 
 The compiler and matched C++ runtime live in the `src/edge-nnc` submodule.
-The root `nnc` and `cpp/libnn` paths are compatibility symlinks. The shell
+The root `nnc` path is a compatibility symlink. The workspace `cpp/libnn`
+headers use relative includes into NNC, and `cpp/baremetal` contains real
+single-core environment files for workspace examples. NNC's standalone
+runner retains its own bare-metal environment.
+Product intrinsic implementations come from `src/edge-e3/include/edge_e3`;
+NNC keeps forwarding headers and accepts the SDK through `--e3-include`. The shell
 entry points use `scripts/run-nnc.sh` to provide this workspace's Edge32
 include directory, simulator executable, and simulator build script.
 Pass `--skip-verilator-build` to reuse an existing simulator for a single model.

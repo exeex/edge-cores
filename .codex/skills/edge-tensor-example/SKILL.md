@@ -7,7 +7,8 @@ description: Build and run the public 64x64 x 128-token tiled circular tensor ma
 
 The maintained example is
 `example/tensor/matmul64x64_128tokens_tiled_circular.cpp`. Its public intrinsic
-surface is in `cpp/intrinsic`, and `tools/elf2mem128.py` converts the
+surface is maintained in `src/edge-e3/include/edge_e3` with compatibility
+headers in `cpp/intrinsic`, and `tools/elf2mem128.py` converts the
 freestanding RISC-V ELF into the testbench memory image.
 
 Use these entry points:

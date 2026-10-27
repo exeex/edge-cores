@@ -52,10 +52,14 @@ SECTIONS
 
     .data : ALIGN(8)
     {
+        __data_start = .;
         __global_pointer$ = . + 0x800;
         *(.sdata .sdata.*)
         *(.data .data.*)
+        . = ALIGN(4);
+        __data_end = .;
     } > RAM AT > ROM
+    __data_load_start = LOADADDR(.data);
 
     .sim_exit : ALIGN(8)
     {

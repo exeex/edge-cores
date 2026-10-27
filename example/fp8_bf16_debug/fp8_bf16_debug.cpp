@@ -1,4 +1,4 @@
-#include "intrinsic/edge_sim_console.hpp"
+#include "intrinsic/edge_intrinsic.hpp"
 
 template <typename LowPrecision>
 static bool check_arithmetic(const char *name, const LowPrecision &lhs,

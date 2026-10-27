@@ -1,7 +1,6 @@
 #include <stdint.h>
 
 #include "intrinsic/edge_intrinsic.hpp"
-#include "intrinsic/edge_sim_console.hpp"
 
 namespace {
 

@@ -10,10 +10,13 @@ public E3 RTL.
 
 The compiler and matched runtime are maintained in the `src/edge-nnc`
 submodule. Initialize it with `git submodule update --init src/edge-nnc`.
-`nnc` and `cpp/libnn` are compatibility symlinks; edits through them modify
-that submodule. Keep its compiler/runtime pair pinned together. Workspace
-shell entry points use `scripts/run-nnc.sh` to supply Edge32 and simulator
-inputs. Direct runner calls need `--edge32-include` and `--sim-exe` (unless
+`nnc` is a compatibility symlink. `cpp/libnn/ops.hpp` forwards to NNC's
+operator umbrella; edit implementations in `src/edge-nnc/cpp/libnn`.
+`cpp/baremetal` contains real workspace single-core environment files, while
+NNC's standalone runners retain their own environment. Keep the NNC
+compiler/runtime pair pinned together. Workspace shell entry points use
+`scripts/run-nnc.sh` to supply E3 SDK, Edge32 and simulator inputs. Direct
+runner calls need `--edge32-include`, `--e3-include` and `--sim-exe` (unless
 `--build-only`); use the shell wrappers for the public workspace defaults.
 
 ## Read first
@@ -23,7 +26,7 @@ inputs. Direct runner calls need `--edge32-include` and `--sim-exe` (unless
   (`graph.py`), lowering and DRAM preferences (`lowering.py`), liveness
   (`liveness.py`), weight packing (`weights.py`), or generated headers
   (`codegen.py`).
-- Read the affected header in `cpp/libnn/` before changing an operator.
+- Read the affected implementation in `src/edge-nnc/cpp/libnn/` before changing an operator.
 - Read `.codex/skills/edge-tensor-example/SKILL.md` for Tensor/DMA intrinsic
   changes and `.codex/skills/edge-verilator-demo/SKILL.md` for simulator changes.
 
@@ -40,7 +43,9 @@ For a semantic operator change:
    inference in `nnc/lowering.py`, or weight packing in `nnc/weights.py` only
    where needed.
 3. Render its C++ call in `nnc/codegen.py`'s `ForwardRenderer`.
-4. Implement it in `cpp/libnn/<op>.hpp` and expose it from `cpp/libnn/ops.hpp`.
+4. Implement it in `src/edge-nnc/cpp/libnn/<op>.hpp` and expose it from that
+   package's `ops.hpp`. Workspace examples include `cpp/libnn/ops.hpp`;
+   do not add per-operator forwarding headers there.
 5. Run the compiler tests and the smallest relevant public-source smoke.
 
 ```sh

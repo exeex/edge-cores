@@ -19,6 +19,7 @@ fi
 mode="${1:?expected unit, smoke or harness}"
 shift
 common=(--edge32-include "${REPO_ROOT}/src/edge-32/include"
+        --e3-include "${REPO_ROOT}/src/edge-e3/include"
         --sim-exe "${SIM_EXE}"
         --sim-build-script "${REPO_ROOT}/scripts/build-verilator.sh")
 case "${mode}" in

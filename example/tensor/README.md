@@ -9,10 +9,11 @@ The BF16 P/O layout uses dtype=0, selected by
 The typed BF16 CSR helper selects a different storage format.
 
 Shared freestanding C++ headers live under `cpp/`; intrinsics and the simulator
-console `printf` implementation live under `cpp/intrinsic/`.
+console `printf` implementation live under `src/edge-e3/include/edge_e3/`;
+`cpp/intrinsic/` keeps compatibility forwarding headers.
 The example prints its measured cycle interval directly; it does not reserve
 X30/X31 as simulator-only metric or debug channels.
-Startup and exit are owned by `cpp/baremetal/crt0.s`; the example only defines
+Startup and exit use the workspace's real `cpp/baremetal/crt0.s`; the example only defines
 `main()` and contains no private `_start`/`edge_main` assembly shim.
 
 Build only the software image:

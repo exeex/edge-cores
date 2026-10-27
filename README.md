@@ -10,10 +10,10 @@ The flow uses the standard **Clang/LLVM toolchain**--installed with
 `apt-get install` on Ubuntu--instead of a custom compiler or patched LLVM/MLIR
 stack. Rather than adding an ASIC backend to the compiler, each ASIC exposes
 its operations through a C++ intrinsics header such as
-[`edge_intrinsic.hpp`](cpp/intrinsic/edge_intrinsic.hpp).
+[`edge_intrinsic.hpp`](src/edge-e3/include/edge_e3/edge_intrinsic.hpp).
 
 Document that interface in an
-[`intrinsic manual`](cpp/intrinsic/README.md) and capture the kernel workflow in
+[`intrinsic manual`](src/edge-e3/include/README.md) and capture the kernel workflow in
 a [`SKILL.md`](.codex/skills/edge-tensor-example/SKILL.md). GPT-5.5 and GPT-5.6
 coding agents can then create hardware-aware kernels with the same ordinary
 `clang++` toolchain on any ASIC platform. This removes custom compiler bring-up
@@ -24,6 +24,11 @@ The simpler toolchain does not come at the expense of accelerator utilization.
 The maintained [`example/tensor`](example/tensor/README.md) reaches **94.84%
 effective MAC utilization** on a 64x64x128 BF16 matmul, including packed weight
 DMA, circular weight loads, Tensor execution, and synchronization.
+
+See the [v0.3 release note](docs/releases/v0.3.md) for the SRAM scheduling,
+BF22 partial-sum and packed FP4/FP8 weight updates. Run the
+[Tensor formats examples](example/tensor_formats/README.md) with
+`./example/tensor_formats/run.sh`.
 
 ## Run Llama 3 and Qwen 3.6 on edge-e3 ASIC RTL
 
@@ -62,8 +67,12 @@ C++ runtime used by n906. Initialize it before running the examples:
 git submodule update --init src/edge-e3 src/edge-asic src/edge-32 src/edge-nnc
 ```
 
-`nnc` and `cpp/libnn` are compatibility symlinks into that submodule.
-The workspace supplies Edge32 intrinsics and the public-source Verilator harness;
+`nnc` is a compatibility symlink into that submodule. The outer `cpp/` is
+the public examples' C++ entry point: `cpp/libnn/ops.hpp` and
+`cpp/intrinsic/edge_intrinsic.hpp` forward to the NNC and E3 umbrella headers.
+The memory map, startup and linker settings remain workspace-owned.
+There are no symlinks under `cpp/`; see [C++ ownership](cpp/README.md).
+The workspace supplies the E3 SDK, Edge32 backend and public-source Verilator harness;
 `scripts/run-nnc.sh` connects these inputs to the shared runner.
 
 Regression ownership and commands are listed in [tests/README.md](tests/README.md):
@@ -277,7 +286,7 @@ license as the authoritative source for availability.
 
 ## High-Performance Software
 
-The **[Edge intrinsic user manual](cpp/intrinsic/README.md)** is the main guide
+The **[Edge intrinsic user manual](src/edge-e3/include/README.md)** is the main guide
 for writing efficient bare-metal software on Edge. It documents the DMA,
 Tensor, ACTU, CMPU, cache, BF16, cycle-counting, and simulator interfaces, with
 working C++ examples.
@@ -344,7 +353,7 @@ measurement details.
 | --- | --- |
 | Set up and run edge-e3 | [`edge-bringup`](.codex/skills/edge-bringup/SKILL.md) |
 | Integrate an accelerator | [`integrate-your-design`](.codex/skills/integrate-your-design/SKILL.md) |
-| Write high-performance software | **[Edge intrinsic user manual](cpp/intrinsic/README.md)** |
+| Write high-performance software | **[Edge intrinsic user manual](src/edge-e3/include/README.md)** |
 | Run the hello smoke | [Hello example](example/hello/README.md) |
 | Debug FP4 scalar conversion | [FP4 debug example](example/fp4_debug/README.md) |
 | Debug FP8/BF16 and floating `printf` | [FP8/BF16 debug example](example/fp8_bf16_debug/README.md) |

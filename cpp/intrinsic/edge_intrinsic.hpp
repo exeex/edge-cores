@@ -1,11 +1,7 @@
-#ifndef EDGE_INTRINSIC_HPP
-#define EDGE_INTRINSIC_HPP
+// SPDX-License-Identifier: Apache-2.0
+#pragma once
 
-// The public Edge32 header owns the scalar and accelerator intrinsics.
+// Workspace memory layout and selected scalar backend, followed by the E3 SDK.
 #include "edge_memory_map.hpp"
-#include "edge32_intrinsic.hpp"
-#ifdef __cplusplus
-#include "edge_fp_scalar.hpp"
-#endif
-
-#endif /* EDGE_INTRINSIC_HPP */
+#include "../../src/edge-32/include/edge32_intrinsic.hpp"
+#include "../../src/edge-e3/include/edge_e3/edge_intrinsic.hpp"

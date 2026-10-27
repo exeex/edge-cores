@@ -63,7 +63,6 @@ COMPILER_RT_BUILTINS="$(${CLANG} "${target_flags[@]}" -print-libgcc-file-name)"
 include_flags=(
     -I"${REPO_ROOT}/cpp"
     -I"${REPO_ROOT}/cpp/intrinsic"
-    -I"${REPO_ROOT}/src/edge-32/include"
 )
 
 "${CLANG}" "${target_flags[@]}" \

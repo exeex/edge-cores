@@ -7,8 +7,8 @@ the workspace root; set `PYTHON=.venv/bin/python` for NNC's PyTorch environment.
 | --- | --- | --- |
 | NNC Python | `./tests/run.sh nnc-unit` | `src/edge-nnc/nnc/test_*.py`: compiler, lowering, packing and FP4 unit tests; no RTL required |
 | NNC integration | `./tests/run.sh nnc` | NNC unit tests, every NNC-owned `smoke_*.py`, then the Llama profile; this workspace supplies the Edge32 includes and public simulator |
-| Software/hardware interface | `./tests/run.sh interface` | Workspace filelist checks and direct `libnn/matmul.hpp` execution against the pinned public RTL; no PyTorch or compiler lowering |
-| Runnable examples | `./tests/run.sh examples` | hello, tensor, ACTU, FP4 and FP8/BF16, each with its existing correctness checks |
+| Software/hardware interface | `./tests/run.sh interface` | Workspace filelist checks and direct NNC matmul execution via `libnn/ops.hpp` against the pinned public RTL; no PyTorch or compiler lowering |
+| Runnable examples | `./tests/run.sh examples` | hello, tensor, ACTU, scalar FP4/FP8 and packed Tensor formats, each with its existing correctness checks |
 | Complete public regression | `./tests/run.sh all` | All three groups, continuing after failures and returning nonzero if any group fails |
 
 `./tests/run.sh --list` lists these routes. The `examples` and `all` runs
@@ -35,7 +35,8 @@ NNC suite reports remain at
 
 ## The workspace owns interface compatibility
 
-`tests/interface/matmul.cpp` calls the pinned NNC runtime header directly,
+`tests/interface/matmul.cpp` includes the workspace `libnn/ops.hpp` entry and
+calls the pinned NNC matmul runtime directly,
 using this workspace's intrinsic adapters, Edge32 include, bare-metal
 startup, linker and public E3 simulator. It checks six BF16 cases: normal and
 transposed RHS, one and two heads, and nine-row tails. K=16 and N=16 exercise
@@ -70,6 +71,7 @@ Reports are in `tests/interface/build/`. Set `EDGE_INTERFACE_OUT` or
 | `example/actu` | direct ACTU commands, BF16 output and throughput measurement |
 | `example/fp4_debug` | scalar FP4 conversion, packing and storage |
 | `example/fp8_bf16_debug` | scalar BF16/FP8 arithmetic and floating-point console formatting |
+| `example/tensor_formats` | packed BF16/INT8/FP4/FP8, configurable BF16 scale groups and direct FP4 Linear/BF22 examples with frozen NNC data |
 | `example/llama` | user-facing NNC example; regression ownership stays with NNC |
 | `example/coremark` | scalar benchmark, run separately |
 

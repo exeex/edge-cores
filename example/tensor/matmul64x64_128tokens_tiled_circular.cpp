@@ -1,6 +1,5 @@
 #include <stdint.h>
 #include "intrinsic/edge_intrinsic.hpp"
-#include "intrinsic/edge_sim_console.hpp"
 
 #define MM64_DIM        64u
 #define MM64_TILE       8u
