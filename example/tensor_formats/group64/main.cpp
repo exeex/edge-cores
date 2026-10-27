@@ -11,9 +11,10 @@ extern "C" int main()
     // One input row [1, K] produces [1, N]; packed weights include BF16 scales.
     Tensor<data::Bf16> x(Shape(1, 64), data::input);
     Tensor<data::Bf16> y(Shape(1, 16), data::output);
-    Tensor<uint8_t> weights(Shape(sizeof(data::weights)), data::weights);
+    // Packs are ordered [N/8, K/group_k].
+    Tensor<data::Pack> weights(Shape(2, 2), data::weights);
 
-    if (!nnedge::op::linear_weight_slots<EDGE_TENSOR_WTYPE_FP4>(y, x, weights))
+    if (!nnedge::op::linear_fp4(y, x, weights))
         return 1;
 
     // The synchronous runtime returns with output ready for CPU reads.

@@ -1,5 +1,5 @@
 {
-  "nnc_revision": "21ac98ccccafed56c1c3a862f8fcfb5bf33af622",
+  "nnc_revision": "138b937726c55fcded3e837a40a527f3aecacf40",
   "cases": {
     "group32": {
       "model": "nnc/test/smoke_linear_fp4_group32.py",

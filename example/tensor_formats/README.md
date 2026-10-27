@@ -8,7 +8,7 @@ Run the v0.3 Tensor features on the public E3/Edge32 Verilator simulator:
 
 Requires the initialized public RTL and NNC submodules, Verilator, LLVM and
 Python 3 for ELF conversion. PyTorch is needed only to refresh the fixtures.
-The runner builds the simulator once and then five bare-metal programs, using
+The runner builds the simulator once and then six bare-metal programs, using
 the shared startup, linker and runtime. Each program checks every output
 bit-for-bit, returns nonzero on a mismatch, and must produce simulator
 `TEST PASS`. The packed program also checks its 26-case completion marker.
@@ -25,7 +25,7 @@ Start with [group32/main.cpp](group32/main.cpp) and its
 - `data.hpp`: literal BF16 input, packed FP4 weights with BF16 scales, expected
   output bits and an output buffer.
 - `main.cpp`: wrap the arrays in Tensor views, call
-  `nnedge::op::linear_weight_slots<EDGE_TENSOR_WTYPE_FP4>()`, and compare output.
+  `nnedge::op::linear_fp4()`, and compare output.
 
 There is no generated forward function, Context, model initialization wrapper,
 custom memcpy or model-specific linker symbol. `main.cpp` includes just
@@ -37,9 +37,48 @@ this synchronous call has completed its cache maintenance.
 ```cpp
 Tensor<data::Bf16> x(Shape(1, 32), data::input);
 Tensor<data::Bf16> y(Shape(1, 8), data::output);
-Tensor<uint8_t> weights(Shape(sizeof(data::weights)), data::weights);
-nnedge::op::linear_weight_slots<EDGE_TENSOR_WTYPE_FP4>(y, x, weights);
+using Pack = nnedge::FP4WeightPack;
+// data::weights is an array of Pack objects (144 bytes each).
+Tensor<Pack> weights(Shape(sizeof(data::weights) / sizeof(Pack)), data::weights);
+nnedge::op::linear_fp4(y, x, weights);
 ```
+
+`WeightPack<WType, SType, Tiles, Scales>` describes one complete output-major
+slot. `SType=0` selects BF16 scales; other scale types are reserved and rejected
+at compile time. `Tiles` is the number of consecutive 8x8 weight tiles after
+the scales (1–255), so the K group is `8*Tiles`. `Scales` defaults to 8 for
+quantized weights; use 1 for a broadcast scale. `WeightPack<BF16>` defaults to
+one scale-free tile (`Scales=0`); explicitly select 1 or 8 for scaled BF16.
+Only the slot end is padded to 16 bytes. `sizeof(Pack)` is the DMA stride;
+`Tensor<Pack>` shapes count packs, not bytes. Packs are ordered by output block,
+then K group, so `[N/8, K/(8*Tiles)]` is a natural shape. For group64, this is
+`[2,2]`: four packs, each containing eight BF16 scales and four FP4 tiles.
+The general `linear_weight_slots(y, x, weights)` call derives the format from
+its element type. Named presets are defined in NNC's `linear_quant.hpp` and
+exposed by `libnn/ops.hpp`:
+
+| Entry point | Pack alias | Weight encoding |
+| --- | --- | --- |
+| `linear_fp4` | `FP4WeightPack` | FP4 E2M1 |
+| `linear_q8_0` | `Q8_0WeightPack` | signed INT8 |
+| `linear_fp8_e4m3fn` | `FP8E4M3FNWeightPack` | FP8 E4M3FN |
+| `linear_fp8_e5m2` | `FP8E5M2WeightPack` | FP8 E5M2 |
+
+These presets fix `SType=0, Tiles=4, Scales=8` (K32) and forward to the same
+kernel. Each accepts its exact typed pack or a compiler-style byte tensor.
+Use the general template for other group sizes or broadcast scales. NNC's
+existing FP4 codegen keeps emitting `linear_fp4`; FP8/Q8 graph lowering is
+not yet implemented. `linear_q8_0` expects converted E3 packing, not raw GGUF.
+ The legacy
+`linear_weight_slots<WType>(..., Tensor<uint8_t>)` overload remains available
+for existing byte payloads and generated code.
+
+The `weight_pack` program runs the NNC-owned typed runtime regression:
+16 configurations covering all five weight formats, broadcast and per-lane
+scales, K16/K32/K64 groups, scale-free BF16, nine input rows, ring wrap, and
+invalid pack counts/K dimensions. It compares against a scalar integer golden. Default quant configurations
+exercise all four named entry points; the other configurations use the
+general template.
 
 Only data and goldens are frozen from NNC; the entry points are handwritten.
 

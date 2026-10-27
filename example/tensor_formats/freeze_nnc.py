@@ -38,14 +38,20 @@ for name in ('group32', 'group64', 'precision', 'ring_wrap'):
 // (16 bytes) followed by four output-major 8x8 E2M1 tiles (32 bytes each).
 namespace data {
 using Bf16 = nnedge::bfloat16_t;
+using Pack = nnedge::FP4WeightPack;
 
 alignas(64) inline Bf16 input[] = {
 '''
     for i in range(0, len(input_bits), 8):
         text += '    ' + ', '.join(f'Bf16(0x{v:04x})' for v in input_bits[i:i+8]) + ',\n'
-    text += '};\n\nalignas(64) inline uint8_t weights[] = {\n'
-    for i in range(0, len(payloads['weight']), 16):
-        text += '    ' + ', '.join(f'0x{b:02x}' for b in payloads['weight'][i:i+16]) + ',\n'
+    text += '};\n\nalignas(64) inline Pack weights[] = {\n'
+    slot_bytes = 144  # eight BF16 scales + four FP4 tiles
+    assert len(payloads['weight']) % slot_bytes == 0
+    for start in range(0, len(payloads['weight']), slot_bytes):
+        text += '    {{\n'
+        for i in range(start, start + slot_bytes, 16):
+            text += '        ' + ', '.join(f'0x{b:02x}' for b in payloads['weight'][i:i+16]) + ',\n'
+        text += '    }},\n'
     text += '};\n\ninline constexpr uint16_t expected_output[] = {\n'
     for i in range(0, len(golden), 8):
         text += '    ' + ', '.join(f'0x{v:04x}' for v in golden[i:i+8]) + ',\n'
