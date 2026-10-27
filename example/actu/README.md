@@ -22,9 +22,5 @@ The terminal prints the four measured cycle counts. Build details are saved to
 `build/build.log`, simulator output to `build/run.log`, and the simulator test
 result to `build/run_case.report`.
 
-This example intentionally contains only the edge-e3 workload. The original
-C906 comparison, plotting utility, and dated synthesis reports are experiment
-artifacts rather than dependencies of the runnable public example.
-
 Set `LLVM_PREFIX`, `LLD_PREFIX`, `VERILATOR`, `EDGE_ACTU_OUT`, or
 `EDGE_VERILATOR_OUT` to override local tool and output paths.

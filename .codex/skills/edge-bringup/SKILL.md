@@ -1,6 +1,6 @@
 ---
 name: edge-bringup
-description: Prepare a macOS or Ubuntu machine for edge-e3 development, diagnose missing Verilator/LLVM/Python dependencies, initialize the public repository, and answer or act on the example prompts in the root README. Use for first-time setup, onboarding, deciding which maintained workflow to run, RTL smoke tests, Edge-vs-C906 benchmarks, Hugging Face model questions, Q4_K_M requests, and questions about where to start adding a feature.
+description: Prepare a macOS or Ubuntu machine for edge-e3 development, diagnose missing Verilator/LLVM/Python dependencies, initialize the public repository, and answer or act on the example prompts in the root README. Use for first-time setup, onboarding, deciding which maintained workflow to run, RTL smoke tests, Edge CoreMark benchmarks, Hugging Face model questions, Q4_K_M requests, and questions about where to start adding a feature.
 ---
 
 # Edge bring-up
@@ -75,7 +75,7 @@ Initialize only required public submodules:
 
 ```sh
 git submodule update --init \
-  src/edge-e3 src/edge-asic src/edge-32 src/edge-nnc third_party/coremark third_party/openc906
+  src/edge-e3 src/edge-asic src/edge-32 src/edge-nnc third_party/coremark
 ./scripts/setup-python.sh
 ```
 
@@ -126,7 +126,7 @@ the root README example prompts. Give the direct answer there before running a
 long build. Then use the maintained specialist skill:
 
 - RTL smoke or public simulator: `edge-verilator-demo` and `software-harness`.
-- Edge versus C906 benchmark: `edge-tensor-example` CoreMark comparison flow.
+- Edge CoreMark benchmark: `edge-tensor-example` CoreMark flow.
 - PyTorch module composition, `nnc.compile()`, quantized Linear examples and
   supported model smoke: `edge-nnc` and `software-harness`.
 - Tensor or NNC feature implementation requiring editable RTL: explain the

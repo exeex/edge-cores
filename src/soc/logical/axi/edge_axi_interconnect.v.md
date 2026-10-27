@@ -6,9 +6,6 @@
 small one-master, two-slave decoder used by `edge_soc_top` to separate the core
 synthesis boundary from the SoC shell.
 
-It follows the C906 SoC role of an external interconnect, but it does not reuse
-C906 RTL.
-
 ## Current Shape
 
 ```text

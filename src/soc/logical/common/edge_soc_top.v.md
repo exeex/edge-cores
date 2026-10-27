@@ -5,7 +5,7 @@
 `edge_soc_top` is the first Edge SoC shell. It gives the Edge path a stable
 SoC-level entry point outside `edge_core_top`.
 
-The shell follows the C906 SoC split at a clean-room implementation level:
+The shell separates the core from the SoC fabric:
 `edge_core_top` is the production core boundary, while `edge_soc_top` owns the
 SoC-side fabric and memory placeholders outside the core bus boundary.
 
@@ -27,7 +27,7 @@ elaboration keeps heavyweight trace/debug outputs behind `EDGE_DEBUG`.
 
 ## External Naming
 
-The observable bus ports intentionally use the inherited C906 direction names:
+The observable bus ports use these direction names:
 
 - `biu_pad_*`: core BIU requests visible at the SoC boundary.
 - `pad_biu_*`: legacy external response pins kept for early compatibility.
@@ -88,7 +88,7 @@ testbench. It instantiates `edge_soc_top`, relies on `edge_axi_ram` for
 `+pass_retire_count=<count>` threshold is reached, when `+pass_on_ebreak`
 observes `core_ebreak_valid` with the expected `x31` value, or when
 `+pass_on_csr_break` observes `core_csr_break_valid` with the expected return
-value. This is a bring-up contract: legacy C906 tohost, custom cache ops,
+value. This is a bring-up contract: tohost, custom cache ops,
 interrupts, and full software exit semantics are intentionally deferred.
 
 `edge_soc_software_c_mem_word_smoke` is the first enabled small C benchmark for

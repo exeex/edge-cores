@@ -10,5 +10,5 @@ Run the Edge build on the public `edge-e3` Verilator simulator:
 `run-edge.sh` script builds the simulator through `scripts/build-verilator.sh`
 and prints the measured `cycle_delta` for two CoreMark iterations.
 
-The `run-c906.sh` and `build-c906-sim.sh` scripts are a separate T-Head C906
-comparison path. They do not run an Edge example.
+Initialize `third_party/coremark` before running this benchmark. This fixed
+two-iteration RTL run is not an official ten-second CoreMark submission.

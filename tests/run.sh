@@ -13,7 +13,7 @@ case "${group}" in
             'interface: standalone NNC matmul via libnn/ops.hpp against workspace intrinsics and public RTL' \
             'examples: hello, tensor, ACTU, scalar FP4/FP8 and named quant Linear examples' \
             'all: nnc + interface + examples' \
-            'benchmark (separate): example/coremark/run-edge.sh and run-c906.sh'
+            'benchmark (separate): example/coremark/run-edge.sh'
         exit 0 ;;
     nnc-unit) exec "${REPO_ROOT}/scripts/run-nnc.sh" unit "$@" ;;
     nnc) exec "${SCRIPT_DIR}/nnc/run.sh" "$@" ;;

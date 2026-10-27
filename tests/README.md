@@ -17,8 +17,8 @@ selects a different project environment for both setup and the NNC runner.
 `./tests/run.sh --list` lists these routes. The `examples` and `all` runs
 write per-case logs and `summary.tsv` under `build/tests/<group>/`. Individual
 runners retain their detailed build, simulator and comparison reports.
-CoreMark is a separate benchmark: `example/coremark/run-edge.sh` and
-`example/coremark/run-c906.sh`; it is not part of the correctness regression.
+CoreMark is a separate benchmark: `example/coremark/run-edge.sh`; it is not
+part of the correctness regression.
 Private RTL tests under `src/test-e3` remain optional and independent.
 
 ## NNC owns compiler and runtime semantics

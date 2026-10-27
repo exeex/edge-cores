@@ -18,7 +18,7 @@ particular:
 | `src/edge-e3/include` software SDK (also `cpp/intrinsic`) | Apache-2.0 |
 | `src/edge-asic` | Applicable Edge product source license; see its LICENSE.md |
 | `src/test-e3`, `src/test-rv` (optional private tests) | License declared by the corresponding repository |
-| `third_party/coremark`, `third_party/openc906` | Upstream project license |
+| `third_party/coremark` | Upstream project license |
 
 A root checkout does not relicense submodule contents. When redistributing a
 combined checkout, release package, or binary, comply with every applicable

@@ -2,8 +2,7 @@
 
 ## Purpose
 
-`edge_axi_ram` is the clean-room Edge SoC DRAM/SRAM placeholder. It is the first
-replacement for the C906 simulation memory role inside `soc`.
+`edge_axi_ram` is the Edge SoC DRAM/SRAM placeholder used for simulation.
 
 ## Behavior
 

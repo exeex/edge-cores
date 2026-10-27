@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-static inline uintptr_t staredge_bench_get_cycle(void)
+static inline uintptr_t edge_bench_get_cycle(void)
 {
     uintptr_t value;
     __asm__ volatile("rdcycle %0" : "=r"(value));
@@ -12,14 +12,8 @@ static inline uintptr_t staredge_bench_get_cycle(void)
 
 static inline void edge_coremark_putc(char ch)
 {
-#if defined(STAREDGE_BENCH_EDGE)
     uintptr_t value = (unsigned char)ch;
     __asm__ volatile("csrw 0x7e1, %0" : : "r"(value));
-#else
-    volatile uint32_t *uart = (volatile uint32_t *)(uintptr_t)0x10015000;
-    *uart = (unsigned char)ch;
-    __asm__ volatile("fence iorw, iorw" ::: "memory");
-#endif
 }
 
 static inline void edge_coremark_print_cycles(uintptr_t value)

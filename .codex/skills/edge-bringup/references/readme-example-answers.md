@@ -16,17 +16,16 @@ Install the host dependencies, initialize `src/edge-e3`, `src/edge-32` and `src/
 Use `./example/llama/test.sh` only when the full public software/NNC regression
 is needed. Every executed example must produce `TEST PASS`.
 
-## Run the Edge vs T-Head C906 benchmarks and summarize the results
+## Run the Edge CoreMark benchmark and summarize the results
 
-For the currently maintained CoreMark comparison, run:
+Initialize `third_party/coremark`, then run:
 
 ```sh
-.codex/skills/edge-tensor-example/scripts/run-coremark-compare.sh
+./example/coremark/run-edge.sh
 ```
 
-Report `cycle_delta` as internal `rdcycle` cycles per iteration and state the
-ISA/configuration difference. This fixed two-iteration RTL run is not an
-official ten-second CoreMark submission. Rerun before quoting a current result.
+Report `cycle_delta` as internal `rdcycle` cycles per iteration. This fixed
+two-iteration RTL run is not an official ten-second CoreMark submission. Rerun before quoting a current result.
 
 ## I downloaded a model from Hugging Face. How do I run it on edge-e3?
 
