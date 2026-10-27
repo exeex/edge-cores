@@ -66,6 +66,12 @@ git submodule update --init src/edge-e3 src/edge-asic src/edge-32 src/edge-nnc
 The workspace supplies Edge32 intrinsics and the public-source Verilator harness;
 `scripts/run-nnc.sh` connects these inputs to the shared runner.
 
+Regression ownership and commands are listed in [tests/README.md](tests/README.md):
+`tests/run.sh nnc` delegates to NNC's tests, `tests/run.sh interface` checks
+standalone `matmul.hpp` against the workspace hardware, and
+`tests/run.sh examples` validates the runnable examples separately.
+Use `PYTHON=.venv/bin/python ./tests/run.sh all` for the complete public suite.
+
 Run the Llama 3 block:
 
 ```sh

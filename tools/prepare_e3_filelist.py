@@ -24,21 +24,23 @@ def checked(path: Path) -> Path:
     return path
 
 
-def expand(filelist: Path, stack: tuple[Path, ...] = ()) -> list[str]:
+def expand(filelist: Path, stack: tuple[Path, ...] = (), *, relative: bool = False) -> list[str]:
     filelist = checked(filelist)
     if filelist in stack:
         raise ValueError(f'cyclic filelist: {filelist}')
     entries = []
+    base = filelist.parent if relative else E3
     for raw in filelist.read_text().splitlines():
         line = raw.split('#', 1)[0].strip()
         if not line:
             continue
-        if line.startswith('-f '):
-            entries.extend(expand(E3 / line[3:].strip(), (*stack, filelist)))
+        if line.startswith(('-f ', '-F ')):
+            entries.extend(expand(base / line[3:].strip(), (*stack, filelist),
+                                  relative=line.startswith('-F ')))
         elif line.startswith('+incdir+'):
-            entries.append('+incdir+' + str(checked(E3 / line[8:])))
+            entries.append('+incdir+' + str(checked(base / line[8:])))
         elif line.endswith(('.v', '.sv')):
-            source = (E3 / line).resolve()
+            source = (base / line).resolve()
             entries.append(str(checked(PUBLIC_MODEL if source == SRAM_MODEL else source)))
         else:
             raise ValueError(f'unsupported filelist entry in {filelist}: {line}')

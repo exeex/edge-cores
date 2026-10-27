@@ -12,6 +12,13 @@ are provided locally under `src/soc/logical/mem`.
 
 ## Select the validation scope
 
+See `tests/README.md` for ownership and routes. NNC owns compiler/runtime
+semantic tests in `src/edge-nnc`; workspace adapters must not duplicate them.
+Use `tests/run.sh nnc-unit` for unit discovery, `tests/run.sh nnc` for NNC's
+full regression, `tests/run.sh interface` for direct `matmul.hpp` plus public
+filelist compatibility, and `tests/run.sh examples` for the independent
+examples. `tests/run.sh all` runs all groups and reports failures separately.
+
 - For console/startup changes, run `./example/hello/run.sh`.
 - For intrinsic or Tensor datapath changes, run `./example/tensor/run.sh`.
 - For one NNC model, run

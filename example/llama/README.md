@@ -14,7 +14,8 @@ PYTHON=.venv/bin/python ./example/llama/run.sh
 Pass another model with `--model-file`, or generate and build without running
 the simulator with `./example/llama/build.sh`. Compiler regression models live
 under `nnc/test/`; this example intentionally contains only the user-facing
-Llama source model.
+Llama source model. The model and `src/smoke_main.cpp` are symlinks into the
+NNC submodule, which owns their implementation.
 
 The compiler and matched C++ runtime live in the `src/edge-nnc` submodule.
 The root `nnc` and `cpp/libnn` paths are compatibility symlinks. The shell
@@ -41,12 +42,16 @@ result against PyTorch, and writes
 `profile.md`, `profile.tsv`, and `software-console.log` below
 `example/llama/build/llama3_source/`.
 
-Run every `nnc/test/smoke_*.py` case and the copied `llama3_source.py`
-profiling case:
+Run NNC's Python unit tests, every `nnc/test/smoke_*.py` case and the
+`llama3_source.py` profiling case through the workspace adapter:
 
 ```sh
-./example/llama/test.sh
+PYTHON=.venv/bin/python ./tests/run.sh nnc
 ```
+
+`./example/llama/test.sh` is a compatibility alias for this command.
+Standalone C++ runtime/hardware compatibility tests are a separate group:
+`./tests/run.sh interface`. See [test routing](../../tests/README.md).
 
 The suite writes its summary to
 `src/edge-nnc/example/llama/build/harness/harness.md` and
