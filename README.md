@@ -6,7 +6,15 @@ Compile PyTorch models to bare-metal C++ and run them on edge-e3 RTL using
 standard LLVM and Verilator. Build on the open-source **edge-32** control
 processor and the source-available **edge-e3** reference NPU.
 
-## New in v0.3
+## New in v0.3.1
+
+NNC now plans SRAM tensor storage across the graph and reduces Matmul kernel
+control overhead. For 64×64 weights and 128 tokens, measured operator MAC
+utilization reaches **86.94–89.18%** across Matmul and six quant Linear formats.
+See the [v0.3.1 release note](docs/releases/v0.3.1.md) for benchmark boundaries,
+compatibility changes and public regression results.
+
+### v0.3 format support
 
 **MXFP4 · NVFP4 · FP8 E4M3FN / E5M2 · FP4 · Q8_0**
 

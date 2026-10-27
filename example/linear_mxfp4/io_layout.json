@@ -1,0 +1,23 @@
+{
+  "layout": "compiler_planned",
+  "lanes": 8,
+  "inputs": {
+    "x": [
+      9,
+      64
+    ]
+  },
+  "input_layouts": {
+    "x": "tensor_tiles"
+  },
+  "outputs": {
+    "y": [
+      9,
+      16
+    ]
+  },
+  "output_layouts": {
+    "y": "tensor_tiles"
+  },
+  "payloads": "physical IO order follows input_layouts/output_layouts; logical shapes unchanged"
+}

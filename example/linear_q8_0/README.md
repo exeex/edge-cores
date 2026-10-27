@@ -58,3 +58,12 @@ cycles for the Linear and optional bias nodes.
 Q8_0 preserves native FP16 scale bits and INT8 codes in E3 tile order.
 Extracted Q8_0 row blocks require repacking before use; there is no GGUF
 file importer. See the [public format contract](../../src/edge-nnc/QUANT_LINEAR.md).
+
+## v0.3.1 storage ABI
+
+NNC plans physical storage across the graph. Inputs use
+`[channel/8, token, 8]` order; output order depends on the final operator.
+Logical PyTorch shapes are unchanged. The saved `io_layout.json` records each
+layout; keep it with the generated headers and binary payloads when replaying
+or regenerating. CPU producers publish payload writes before DMA, and CPU
+readers acquire completed outputs; see the [ownership contract](../../src/edge-nnc/MEMORY_OWNERSHIP.md).

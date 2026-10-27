@@ -40,7 +40,6 @@ inline void init()
     nnedge::reset_allocator();
     init(&mio::ctx, const_cast<unsigned char *>(weight_begin));
     mio::x = Tensor<dtype>(nnedge::Shape{9, 64}, reinterpret_cast<dtype *>(const_cast<unsigned char *>(input_begin) + 0));
-    edge_dcache_clean_range(mio::x.data, nnedge::numel(mio::x) * sizeof(dtype));
     mio::y = Tensor<dtype>(nnedge::Shape{9, 16}, reinterpret_cast<dtype *>(output_begin + 0));
 }
 

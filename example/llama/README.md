@@ -8,6 +8,7 @@ model.py       PyTorch model and explicit nnc.compile(...) entry
 main.cpp       initialize and call the generated forward function
 forward.hpp    generated C++ operator calls, tracked in Git
 init.hpp       generated tensor bindings, tracked in Git
+io_layout.json generated physical I/O layout metadata, tracked in Git
 input.bin      local generated input, ignored
 weight.bin     local generated weights, ignored
 run.sh         generate, build, simulate and compare with PyTorch
@@ -38,7 +39,9 @@ attention = Attention(head_count=2)
 ops directly. Export still sees `nnedge::linear`, `rms_norm`, `rope`,
 `kv_cache_update`, and `attention`. Fake implementations infer metadata only.
 The runtime consumes BF16 payloads; the original PyTorch fixture's parameter
-values, reference output and lowered operator sequence are preserved.
+values and logical reference output are preserved. NNC expands Attention
+into Matmul-transpose, softmax and Matmul, and plans physical graph storage.
+External payload order follows the generated `io_layout.json`.
 The current attention op is unscaled/unmasked and KV update is a prefill
 pass-through, as in the original reduced model.
 

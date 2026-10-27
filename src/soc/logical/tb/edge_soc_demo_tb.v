@@ -1,7 +1,6 @@
 `timescale 1ns/1ps
 
-// Public encrypted-core testbench. Keep this on module ports and public SoC
-// RAM; the hierarchy below edge_core_edge32_top is intentionally obfuscated.
+// Public E3 testbench with optional observation of the pinned public RTL.
 module edge_soc_demo_tb;
   localparam ADDR_WIDTH = 40;
   localparam DATA_WIDTH = 128;
@@ -22,6 +21,17 @@ module edge_soc_demo_tb;
   integer report_fd;
   reg [4095:0] report_path = "run_case.report";
   reg [4095:0] dump_path = "output.hex";
+  reg profile_mac = 1'b0;
+  reg trace_cmd = 1'b0;
+  integer mac_issue_count = 0;
+  integer mac_start_count = 0;
+  // Observe accepted work, independently of the software timing records.
+  wire mac_issue = dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+      .x_edge_tensor_unit_bank16.x_tensor_engine.compute_valid_q;
+  wire tensor_start = dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
+      .x_edge_tensor_unit_bank16.start_accept;
+  wire command_fire = dut.core_top.platform.dispatch.cmd_valid &&
+      dut.core_top.platform.dispatch.cmd_ready;
 `ifdef EDGE_PRIVATE_TENSOR_METRICS
   integer tensor_engine_compute_valid_count;
   integer tensor_engine_compute_busy_count;
@@ -191,6 +201,8 @@ module edge_soc_demo_tb;
   always #5 clk = ~clk;
 
   initial begin
+    profile_mac = $test$plusargs("profile_mac");
+    trace_cmd = $test$plusargs("trace_cmd");
 `ifdef EDGE_PRIVATE_TENSOR_METRICS
     tensor_engine_compute_valid_count = 0;
     tensor_engine_compute_busy_count = 0;
@@ -228,6 +240,14 @@ module edge_soc_demo_tb;
   always @(posedge clk) begin : monitor
     reg output_ok;
     if (rst_b) begin
+      if (profile_mac) begin
+        if (mac_issue) mac_issue_count = mac_issue_count + 1;
+        if (tensor_start) mac_start_count = mac_start_count + 1;
+      end
+      if (trace_cmd && command_fire)
+        $display("lite accel inst=%08h capture=%016h",
+                 dut.core_top.platform.dispatch.cmd_inst[31:0],
+                 dut.core_top.platform.dispatch.cmd_capture_value);
 `ifdef EDGE_PRIVATE_TENSOR_METRICS
       if (dut.core_top.platform.dtcm.x_edge_dtcm_subsys_core
               .x_edge_tensor_unit_bank16.x_tensor_engine.compute_valid_q)
@@ -333,6 +353,9 @@ module edge_soc_demo_tb;
         write_report(1'b1, "pass");
         $display("EDGE_DEMO TEST PASS cycle=%0d seq=%0d epoch=%0d",
                  cycle, core_csr_break_seq_id, core_csr_break_epoch);
+        if (profile_mac)
+          $display("MAC PROFILE issue=%0d macs=%0d starts=%0d ",
+                   mac_issue_count, mac_issue_count * 64, mac_start_count);
         $finish;
       end
       if (cycle >= max_cycles) begin

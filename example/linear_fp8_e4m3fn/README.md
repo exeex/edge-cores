@@ -54,3 +54,12 @@ regeneration. ELF files and execution logs stay under `build/`.
 Use `--build-only` to build the saved artifacts without simulation, or
 `--skip-verilator-build` to reuse the current simulator. `--profile` reports
 cycles for the Linear and optional bias nodes.
+
+## v0.3.1 storage ABI
+
+NNC plans physical storage across the graph. Inputs use
+`[channel/8, token, 8]` order; output order depends on the final operator.
+Logical PyTorch shapes are unchanged. The saved `io_layout.json` records each
+layout; keep it with the generated headers and binary payloads when replaying
+or regenerating. CPU producers publish payload writes before DMA, and CPU
+readers acquire completed outputs; see the [ownership contract](../../src/edge-nnc/MEMORY_OWNERSHIP.md).

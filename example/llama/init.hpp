@@ -66,10 +66,8 @@ inline void init()
     nnedge::reset_allocator();
     init(&mio::ctx, const_cast<unsigned char *>(weight_begin));
     mio::x = Tensor<dtype>(nnedge::Shape{32, 64}, reinterpret_cast<dtype *>(const_cast<unsigned char *>(input_begin) + 0));
-    edge_dcache_clean_range(mio::x.data, nnedge::numel(mio::x) * sizeof(dtype));
     mio::start_pos = 0;
     mio::mask_or_params = Tensor<dtype>(nnedge::Shape{32, 32}, reinterpret_cast<dtype *>(const_cast<unsigned char *>(input_begin) + 4096));
-    edge_dcache_clean_range(mio::mask_or_params.data, nnedge::numel(mio::mask_or_params) * sizeof(dtype));
     mio::y = Tensor<dtype>(nnedge::Shape{32, 64}, reinterpret_cast<dtype *>(output_begin + 0));
 }
 

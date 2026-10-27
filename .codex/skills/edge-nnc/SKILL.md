@@ -116,10 +116,11 @@ Set `PYTHON=/path/to/python` for the shell wrapper, or invoke
 
 ## Correctness and memory rules
 
-- Preserve PyTorch contiguous public input/output byte order. Treat packed or
-  tiled accelerator buffers as operator-private layouts.
-- Pack only static Linear weights in the compiler. Keep Linear input/output
-  tensors contiguous.
+- Preserve logical PyTorch shapes and values. NNC plans physical graph-edge
+  storage; external payloads follow `io_layout.json`, including tensor-tile
+  order where selected. Keep headers, payloads, goldens and layout metadata together.
+- Pack only static Linear weights in the compiler. Matmul RHS remains a
+  row-major BF16 runtime matrix in DRAM; hardware DMA slices its tiles.
 - Pass values between operators only through `Tensor` objects. Never retain a
   `dtcm_op_scratch()` pointer as tensor storage.
 - Keep the first 96 KiB of DTCM for the tensor arena and the final 32 KiB for
@@ -127,8 +128,10 @@ Set `PYTHON=/path/to/python` for the shell wrapper, or invoke
 - Treat `free_tensor()` as LIFO-only reclamation and never use a cleared tensor.
 - Do not use DMA for DTCM-to-DTCM copies. `nnedge::copy()` uses CMPU COPY mode 9
   for aligned BF16 DTCM transfers.
-- Clean DRAM sources before DMA, synchronize producers before consumers, and
-  clean/invalidate DRAM destinations around accelerator output DMA.
+- Follow `MEMORY_OWNERSHIP.md`: scalar writers publish DRAM payloads before
+  DMA and scalar readers acquire completed outputs. ASIC/DMA kernels synchronize
+  engines without maintaining D-cache internally. Keep metadata/payload cache
+  lines separate and publish scalar-initialized output guards before DMA.
 - Route payload transfers through `nnedge::copy` or existing DMA/CMPU helpers
   instead of adding manual scalar copy loops to new operators. The maintained
   DRAM-to-DRAM `copy` fallback does use scalar loads/stores with cache handling;

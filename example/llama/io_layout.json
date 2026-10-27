@@ -1,0 +1,28 @@
+{
+  "layout": "compiler_planned",
+  "lanes": 8,
+  "inputs": {
+    "x": [
+      32,
+      64
+    ],
+    "mask_or_params": [
+      32,
+      32
+    ]
+  },
+  "input_layouts": {
+    "x": "contiguous",
+    "mask_or_params": "contiguous"
+  },
+  "outputs": {
+    "y": [
+      32,
+      64
+    ]
+  },
+  "output_layouts": {
+    "y": "contiguous"
+  },
+  "payloads": "physical IO order follows input_layouts/output_layouts; logical shapes unchanged"
+}

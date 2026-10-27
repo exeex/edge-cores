@@ -16,11 +16,12 @@ if [[ $# -eq 0 ]]; then
 fi
 printf 'case\tstatus\tlog\n' > "${OUT_DIR}/summary.tsv"
 status=0
-for name in packed weight_pack; do
+for name in packed weight_pack cache_ownership; do
     case_dir="${OUT_DIR}/${name}"
     mkdir -p "${case_dir}"
     source="${REPO_ROOT}/src/edge-nnc/nnc/test/packed_wsld_main.cpp"
     if [[ "${name}" == weight_pack ]]; then source="${REPO_ROOT}/src/edge-nnc/nnc/test/weight_pack_main.cpp"; fi
+    if [[ "${name}" == cache_ownership ]]; then source="${REPO_ROOT}/src/edge-nnc/nnc/test/cache_ownership_main.cpp"; fi
     if ! "${REPO_ROOT}/scripts/build-cpp-example.sh" "${source}" "${case_dir}" "${name}" >"${case_dir}/build.log" 2>&1; then
         cat "${case_dir}/build.log" >&2; exit 1
     fi
@@ -41,6 +42,7 @@ for name in packed weight_pack; do
     if ! grep -q 'TEST PASS' "${case_dir}/run_case.report"; then result=FAIL; fi
     if [[ "${name}" == packed ]] && ! grep -q 'PACKED ALL PASS cases=26' "${case_dir}/run.log"; then result=FAIL; fi
     if [[ "${name}" == weight_pack ]] && ! grep -q 'WEIGHT PACK ALL PASS cases=16' "${case_dir}/run.log"; then result=FAIL; fi
+    if [[ "${name}" == cache_ownership ]] && ! grep -q 'CACHE OWNERSHIP PASS' "${case_dir}/run.log"; then result=FAIL; fi
     if [[ "${result}" == FAIL ]]; then status=1; cat "${case_dir}/run.log" >&2; fi
     printf '%s\t%s\t%s\n' "${name}" "${result}" "${case_dir}/run.log" | tee -a "${OUT_DIR}/summary.tsv"
 done

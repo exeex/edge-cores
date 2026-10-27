@@ -30,8 +30,9 @@ unit discovery and `src/edge-nnc/nnc/run_harness.py` through `scripts/run-nnc.sh
 local model list or tolerance overrides. Both phases run even if one fails.
 Extra arguments to `tests/run.sh nnc` are passed to NNC's model harness.
 `tests/nnc/packed.sh` supplies the workspace build and simulator adapter for
-NNC's `packed_wsld_main.cpp` (26 configurations) and `weight_pack_main.cpp`
-(16 configurations). Low-level packing and DMA tests live with NNC rather
+NNC's `packed_wsld_main.cpp` (26 configurations), `weight_pack_main.cpp`
+(16 configurations), and `cache_ownership_main.cpp` (scalar/DMA ownership,
+zero and scalar copy). Low-level packing and DMA tests live with NNC rather
 than in the user-facing Linear examples.
 
 `example/llama/test.sh` remains a compatibility entry point for this group.
@@ -49,8 +50,12 @@ using this workspace's intrinsic adapters, Edge32 include, bare-metal
 startup, linker and public E3 simulator. It checks six BF16 cases: normal and
 transposed RHS, one and two heads, and nine-row tails. K=16 and N=16 exercise
 multiple K/output tiles, partial sums, strided/circular DMA and public
-contiguous layouts. Each value is compared bit-for-bit with an independent
+tensor layouts. Each value is compared bit-for-bit with an independent
 integer golden; no runtime reference helper or NNC-generated model is used.
+The fixture writes and checks the runtime's `[head, channel/8, token, 8]`
+LHS/output storage directly. RHS stays row-major in DRAM. Scalar test-data
+writes are published before DMA, including output guard initialization;
+the checker acquires the DMA result before reading it.
 It requires both the six-case completion marker and simulator `TEST PASS`.
 
 This sentinel belongs here even though the tested header belongs to NNC:

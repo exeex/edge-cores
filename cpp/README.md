@@ -34,5 +34,7 @@ Initialize `src/edge-e3`, `src/edge-32` and `src/edge-nnc` before building.
 NNC's standalone runners retain their own environment and receive platform
 SDK paths through `scripts/run-nnc.sh`. Keep the E3 SDK and NNC adapter
 revisions matched in consuming workspaces.
+`scripts/build-cpp-example.sh` also links NNC's shared
+`cpp/baremetal/memory.c` for compiler-emitted metadata copies such as `memcpy`.
 
 The hardware-ID diagnostic source is `example/hello/hardware_id.cpp`.

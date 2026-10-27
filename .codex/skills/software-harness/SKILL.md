@@ -88,8 +88,9 @@ The public regression must not require private test repositories.
 
 Do not replace a failing semantic test by loosening tolerance, changing its
 golden layout, or adding a skip. Remove a model only when the user identifies it
-as obsolete. Preserve PyTorch-contiguous public tensor layouts; accelerator
-packing belongs inside an operator. Use the `edge-nnc` skill for detailed NNC
+as obsolete. Preserve logical PyTorch values and the compiler-owned physical
+storage ABI recorded in `io_layout.json`. A storage migration must preserve
+logical goldens after decoding the layout. Use the `edge-nnc` skill for detailed NNC
 lowering and memory rules.
 
 ## Require and inspect reports

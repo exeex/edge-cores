@@ -33,8 +33,8 @@ static int run_case(unsigned rows, unsigned heads, bool transposed)
     for (unsigned h = 0; h < heads; ++h) {
         for (unsigned r = 0; r < rows; ++r) {
             for (unsigned k = 0; k < kK; ++k) {
-                const unsigned i = transposed ? r * heads * kK + h * kK + k
-                                             : (h * rows + r) * kK + k;
+                // The runtime consumes [head, channel/8, token, 8] storage.
+                const unsigned i = ((h * (kK / 8) + k / 8) * rows + r) * 8 + k % 8;
                 lhs_data[i] = Bf16::from_float(lhs_value(h, r, k));
             }
         }
@@ -59,6 +59,7 @@ static int run_case(unsigned rows, unsigned heads, bool transposed)
     Tensor<Bf16> output(output_shape, output_data);
     edge_dcache_clean_range(lhs_data, lhs_count * sizeof(Bf16));
     edge_dcache_clean_range(rhs_data, rhs_count * sizeof(Bf16));
+    edge_dcache_clean_range(output_data, output_count * sizeof(Bf16));
     if (transposed)
         nnedge::op::matmul_transpose(output, lhs, rhs, heads);
     else
@@ -74,8 +75,7 @@ static int run_case(unsigned rows, unsigned heads, bool transposed)
                 int expected = 0;
                 for (unsigned k = 0; k < kK; ++k)
                     expected += lhs_value(h, r, k) * rhs_value(h, k, c);
-                const unsigned i = transposed ? (h * rows + r) * kN + c
-                                             : r * heads * kN + h * kN + c;
+                const unsigned i = ((h * (kN / 8) + c / 8) * rows + r) * 8 + c % 8;
                 const auto bits = Bf16::from_float(expected).bits;
                 if (output_data[i].bits != bits) {
                     edge_sim_printf("MATMUL_INTERFACE FAIL transpose=%u heads=%u rows=%u index=%u got=%x expected=%x\n",

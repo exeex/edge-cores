@@ -6,8 +6,8 @@
 self.linear = LinearNvFp4(torch.nn.Linear(64, 16, bias=False))
 ```
 
-The example uses contiguous BF16 input `[9,64]`, E2M1 FP4 weights `[16,64]`,
-and contiguous BF16 output `[9,16]`. Each output lane has one E4M3FN byte
+The example uses logical BF16 input `[9,64]`, E2M1 FP4 weights `[16,64]`,
+and logical BF16 output `[9,16]`. Each output lane has one E4M3FN byte
 scale per K16 group. Nine rows exercise token batching and a tail; sixteen
 outputs and K64 exercise multiple output blocks and scale groups.
 
@@ -50,8 +50,8 @@ Execution logs, ELF files and output dumps stay under `build/`.
 ```
 
 This explicitly calls `nnc.compile(..., save_reference=True)` and replaces
-`forward.hpp`, `init.hpp`, `input.bin`, `weight.bin` and `expected.bin` beside
-the model. Keep these five versioned artifacts together. Inspect the named
+`forward.hpp`, `init.hpp`, `input.bin`, `weight.bin`, `expected.bin` and `io_layout.json` beside
+the model. Keep these six versioned artifacts together. Inspect the named
 Linear call in [forward.hpp](forward.hpp), bindings in [init.hpp](init.hpp),
 and the minimal [main.cpp](main.cpp) that initializes and calls the model.
 
@@ -59,3 +59,12 @@ The source model and C++ main are maintained in public `edge-nnc` and linked
 here. Its `smoke_linear_nvfp4_example.py` entry is automatically discovered by
 `tests/run.sh nnc`; this saved-artifact example is also part of
 `tests/run.sh examples`. Private test repositories are not required.
+
+## v0.3.1 storage ABI
+
+NNC plans physical storage across the graph. Inputs use
+`[channel/8, token, 8]` order; output order depends on the final operator.
+Logical PyTorch shapes are unchanged. The saved `io_layout.json` records each
+layout; keep it with the generated headers and binary payloads when replaying
+or regenerating. CPU producers publish payload writes before DMA, and CPU
+readers acquire completed outputs; see the [ownership contract](../../src/edge-nnc/MEMORY_OWNERSHIP.md).

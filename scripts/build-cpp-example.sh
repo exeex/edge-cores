@@ -63,6 +63,7 @@ COMPILER_RT_BUILTINS="$(${CLANG} "${target_flags[@]}" -print-libgcc-file-name)"
 include_flags=(
     -I"${REPO_ROOT}/cpp"
     -I"${REPO_ROOT}/cpp/intrinsic"
+    -I"${REPO_ROOT}/src/edge-nnc/cpp"
 )
 
 "${CLANG}" "${target_flags[@]}" \
@@ -72,6 +73,11 @@ include_flags=(
 "${CLANG}" "${target_flags[@]}" -std=c11 -ffreestanding -fno-builtin -O2 \
     -c "${REPO_ROOT}/cpp/baremetal/soft_double.c" \
     -o "${OUT_DIR}/soft_double.o"
+
+# Match NNC's freestanding support for compiler-emitted Tensor metadata copies.
+"${CLANG}" "${target_flags[@]}" -std=c11 -ffreestanding -fno-builtin -O2 \
+    -c "${REPO_ROOT}/src/edge-nnc/cpp/baremetal/memory.c" \
+    -o "${OUT_DIR}/memory.o"
 
 "${CLANGXX}" "${target_flags[@]}" \
     -x c++ -std=c++17 -ffreestanding -fno-builtin \
@@ -86,7 +92,7 @@ link_command=(
     -nostdlib -nostartfiles
     -Wl,-T,"${REPO_ROOT}/cpp/baremetal/linker.ld"
     -Wl,-Map,"${OUT_DIR}/${NAME}.map"
-    "${OUT_DIR}/crt0.o" "${OUT_DIR}/${NAME}.o" "${OUT_DIR}/soft_double.o"
+    "${OUT_DIR}/crt0.o" "${OUT_DIR}/${NAME}.o" "${OUT_DIR}/soft_double.o" "${OUT_DIR}/memory.o"
 )
 if [[ -f "${COMPILER_RT_BUILTINS}" ]]; then
     link_command+=("${COMPILER_RT_BUILTINS}")
