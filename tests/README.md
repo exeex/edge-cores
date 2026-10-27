@@ -32,8 +32,9 @@ NNC's `packed_wsld_main.cpp` (26 configurations) and `weight_pack_main.cpp`
 than in the user-facing Linear examples.
 
 `example/llama/test.sh` remains a compatibility entry point for this group.
-The user-facing Llama model and C++ main are symlinks to the canonical NNC
-example, so the workspace does not maintain a second implementation.
+The flat `example/llama/model.py` and `main.cpp` link to the canonical NNC
+example. Its generated `forward.hpp` and `init.hpp` are versioned beside the
+main; local `.bin` files are ignored. The legacy source paths remain available.
 NNC suite reports remain at
 `src/edge-nnc/example/llama/build/harness/harness.md` and `harness.tsv`.
 
@@ -79,7 +80,7 @@ Reports are in `tests/interface/build/`. Set `EDGE_INTERFACE_OUT` or
 | `example/linear_q8_0` | same flow for K32 signed INT8 with BF16 scales |
 | `example/linear_fp8_e4m3fn` | same flow for FP8 E4M3FN |
 | `example/linear_fp8_e5m2` | same flow for FP8 E5M2 |
-| `example/llama` | user-facing NNC example; regression ownership stays with NNC |
+| `example/llama` | flat, module-based Llama source and tracked C++ headers; regenerated binary payloads stay local; regression ownership stays with NNC |
 | `example/coremark` | scalar benchmark, run separately |
 
 When RTL, instructions, memory layout or a runtime header changes, run the

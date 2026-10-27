@@ -1,80 +1,100 @@
-# Llama NNC example
+# Llama 3 NNC example
 
-This example exports the tiny Llama 3 transformer block in
-`model/llama3_source.py`, lowers it through `nnc/compiler.py`,
-links the generated weights and example inputs into a bare-metal RISC-V image, and checks the
-`edge-e3` Verilator output against PyTorch.
+[model.py](model.py) contains a tiny Llama 3 transformer block composed from
+reusable NNC modules. The example directory is flat:
+
+```text
+model.py       PyTorch model and explicit nnc.compile(...) entry
+main.cpp       initialize and call the generated forward function
+forward.hpp    generated C++ operator calls, tracked in Git
+init.hpp       generated tensor bindings, tracked in Git
+input.bin      local generated input, ignored
+weight.bin     local generated weights, ignored
+run.sh         generate, build, simulate and compare with PyTorch
+build/         ELF, simulator logs and profiling reports, ignored
+```
+
+The canonical model and minimal main live in edge-nnc and are linked here.
+The former `model/llama3_source.py` and `src/smoke_main.cpp` paths remain
+available for compatibility. The NNC smoke suite links to the same model.
+
+## Model modules
+
+The model imports `Linear`, `RMSNorm`, `RoPE`, `KVCacheUpdate`, and `Attention`
+from `nnc`. Their implementations live in `nnc/transformer.py`, with custom-op
+registration and fake implementations in `nnc/ops.py`.
+
+```python
+from nnc import Linear, RMSNorm, RoPE, KVCacheUpdate, Attention
+
+projection = Linear(torch.nn.Linear(64, 64, bias=False))
+normalization = RMSNorm(64, eps=1e-5)
+rope = RoPE()
+cache = KVCacheUpdate()
+attention = Attention(head_count=2)
+```
+
+`Model.forward()` composes modules instead of declaring or invoking custom
+ops directly. Export still sees `nnedge::linear`, `rms_norm`, `rope`,
+`kv_cache_update`, and `attention`. Fake implementations infer metadata only.
+The runtime consumes BF16 payloads; the original PyTorch fixture's parameter
+values, reference output and lowered operator sequence are preserved.
+The current attention op is unscaled/unmasked and KV update is a prefill
+pass-through, as in the original reduced model.
+
+## Generate and run
 
 ```sh
-git submodule update --init src/edge-e3 src/edge-asic src/edge-32 src/edge-nnc
 ./scripts/setup-python.sh
+.venv/bin/python -m example.llama.model
 PYTHON=.venv/bin/python ./example/llama/run.sh
 ```
 
-Pass another model with `--model-file`, or generate and build without running
-the simulator with `./example/llama/build.sh`. Compiler regression models live
-under `nnc/test/`; this example intentionally contains only the user-facing
-Llama source model. The model and `src/smoke_main.cpp` are symlinks into the
-NNC submodule, which owns their implementation.
+The model's visible entry point is:
 
-The compiler and matched C++ runtime live in the `src/edge-nnc` submodule.
-The root `nnc` path is a compatibility symlink. The workspace `cpp/libnn`
-headers use relative includes into NNC, and `cpp/baremetal` contains real
-single-core environment files for workspace examples. NNC's standalone
-runner retains its own bare-metal environment.
-Product intrinsic implementations come from `src/edge-e3/include/edge_e3`;
-NNC keeps forwarding headers and accepts the SDK through `--e3-include`. The shell
-entry points use `scripts/run-nnc.sh` to provide this workspace's Edge32
-include directory, simulator executable, and simulator build script.
-Pass `--skip-verilator-build` to reuse an existing simulator for a single model.
-
-The n906-aligned compiler/runtime and public E3 RTL support the FP4/WSLD
-fixtures. See `src/edge-nnc/FP4_LINEAR.md` for their hardware contract.
-Private hardware regression repositories are not required by this example.
-
-The repository setup selects CPU or a compatible NVIDIA CUDA PyTorch build and
-syncs the locked `.venv`. Set `PYTHON=/path/to/python` only when intentionally
-using another virtual environment.
-
-Profile every lowered node in the complete tiny Llama transformer block:
-
-```sh
-./example/llama/profile.sh
+```python
+if __name__ == "__main__":
+    m = make_tiny_llama_block().eval()
+    nnc.compile(m, make_example_args(), out_dir=Path(__file__).parent)
 ```
 
-The profiling smoke compiles `model/llama3_source.py` directly, checks its BF16
-result against PyTorch, and writes
-`profile.md`, `profile.tsv`, and `software-console.log` below
-`example/llama/build/llama3_source/`.
+Unlike the four small quant Linear examples, this Llama example does not
+version `.bin` files. Its runner regenerates headers and payloads from the
+model on every run, builds them, and compares all 2048 output values with the
+PyTorch golden. This requires the repository PyTorch environment, LLVM and
+the initialized public E3, Edge32, ASIC and NNC submodules. Hardware comparison
+uses the existing normal-range BF16 tolerance; the model is one reduced block.
 
-Run NNC's Python unit tests, every `nnc/test/smoke_*.py` case and the
-`llama3_source.py` profiling case through the workspace adapter:
+```sh
+./example/llama/build.sh                         # generate and build only
+PYTHON=.venv/bin/python ./example/llama/profile.sh
+```
+
+The generated headers stay beside `main.cpp` for review. Binaries remain
+local and ignored. The ELF, `software-console.log`, output dump, and
+`profile.md` / `profile.tsv` live in `example/llama/build/`. Profile shares are
+shares of summed operator-call cycles, excluding allocation and final copying.
+Pass `--skip-verilator-build` after building the current RTL to reuse the
+simulator.
+
+Other source models remain supported through the general smoke adapter:
+
+```sh
+PYTHON=.venv/bin/python ./example/llama/run.sh --model-file nnc/test/smoke_silu.py
+PYTHON=.venv/bin/python ./example/llama/run.sh --model-file nnc/test/qwen36_source.py
+```
+
+Those calls use isolated `example/llama/build/<model-name>/generated/`
+artifacts and the generic NNC main, so they do not replace the Llama headers.
+
+## Regression
 
 ```sh
 PYTHON=.venv/bin/python ./tests/run.sh nnc
 ```
 
-`./example/llama/test.sh` is a compatibility alias for this command.
-Standalone C++ runtime/hardware compatibility tests are a separate group:
-`./tests/run.sh interface`. See [test routing](../../tests/README.md).
-
-The suite writes its summary to
-`src/edge-nnc/example/llama/build/harness/harness.md` and
-keeps one log per model in the same directory. Suite model binaries and the
-Llama profile are generated under `src/edge-nnc/example/llama/build/`; single
-model commands retain `example/llama/build/<model>/`.
-
-Generated headers, weights, binaries, and logs are written below the build
-directories above and are ignored by Git.
-
-The compiler is split by responsibility: `nnc/graph.py` reads the PyTorch
-export and forward ABI, `nnc/lowering.py` maps graph operations to kernels,
-`nnc/weights.py` packs static data, `nnc/liveness.py` finds temporary tensor
-last uses, and `nnc/codegen.py` renders the C++ headers. `nnc/compiler.py`
-provides the command-line entry point and writes the artifacts.
-
-The generated `weight.bin` and `input.bin` are linked into `.nnedge_weights`
-and `.nnedge_inputs`. `init.hpp` binds tensors using each section's start
-address plus the compiler's offset. Output storage lives in the ELF's
-`.nnedge_outputs` section at the runner's `--output-base` address (default
-`0x100000`).
+NNC owns Python tests, all `nnc/test/smoke_*.py` models, Llama profiling and the
+low-level packed-weight C++ test sources. The workspace supplies the public
+SDK, simulator, startup and test adapters. Suite reports remain under
+`src/edge-nnc/example/llama/build/harness/`, with the suite's Llama profile in
+`src/edge-nnc/example/llama/build/llama3_source/`. See [test routing](../../tests/README.md).

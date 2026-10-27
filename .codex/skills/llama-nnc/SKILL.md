@@ -78,7 +78,7 @@ Set `PYTHON=/path/to/python` for the shell wrapper, or invoke
 
 ## Transformer-block profiling smoke
 
-Run `example/llama/model/llama3_source.py` directly as the complete tiny Llama
+Run `example/llama/model.py` directly as the complete tiny Llama
 transformer block with compiler-owned per-node instrumentation:
 
 ```sh
@@ -114,7 +114,12 @@ python3 -m unittest nnc.test_compiler
 
 The suite must cover every `nnc/test/smoke_*.py` file and finish by profiling
 `nnc/test/llama3_source.py`. Keep that file byte-identical to the user-facing
-`example/llama/model/llama3_source.py`. Require `harness.md` to report every row
+`example/llama/model.py`. Require `harness.md` to report every row
 as PASS; do not maintain a silent skip list.
 
-Generated files belong under `example/llama/build/` or the shared harness's `src/edge-nnc/example/llama/build/` and must remain untracked.
+The flat Llama example versions generated `forward.hpp` and `init.hpp` beside
+`model.py` and `main.cpp`; its runner regenerates them using `--generated-dir`.
+Local `.bin` files are ignored. ELF files, logs and profiles belong under
+`example/llama/build/`; shared-harness outputs remain under
+`src/edge-nnc/example/llama/build/`. The four small quant Linear examples also
+version their input/weight/expected `.bin` snapshots for Torch-free replay.

@@ -91,6 +91,11 @@ Run the Llama 3 block:
 PYTHON=.venv/bin/python ./example/llama/run.sh
 ```
 
+The flat [Llama example](example/llama/README.md) contains `model.py`,
+`main.cpp`, and tracked generated `forward.hpp` / `init.hpp`. The model imports
+reusable NNC modules for its custom ops. Llama binary payloads are regenerated
+locally and ignored by Git.
+
 Run the Qwen 3.6 layer:
 
 ```sh

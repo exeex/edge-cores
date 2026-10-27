@@ -28,7 +28,7 @@ case "${mode}" in
         exec "${PYTHON}" -m unittest discover -s nnc -p 'test_*.py' "$@"
         ;;
     smoke)
-        model="${REPO_ROOT}/example/llama/model/llama3_source.py"
+        model="${REPO_ROOT}/example/llama/model.py"
         args=("$@")
         for ((i=0; i<${#args[@]}; i++)); do
             case "${args[i]}" in

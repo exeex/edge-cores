@@ -56,7 +56,7 @@ The public regression must not require private test repositories.
 - run each model in an isolated Python process and compare its BF16 output with
   the PyTorch golden;
 - verify `nnc/test/llama3_source.py` matches the user-facing
-  `example/llama/model/llama3_source.py`, then run the test copy with
+  `example/llama/model.py`, then run the test copy with
   `--profile`;
 - continue after individual failures so the final report is complete;
 - exit nonzero unless every model passes.

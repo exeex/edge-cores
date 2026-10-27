@@ -1,0 +1,1 @@
+../../src/edge-nnc/example/llama/main.cpp
