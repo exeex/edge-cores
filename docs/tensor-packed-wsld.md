@@ -52,5 +52,5 @@ Run the low-level regression and typed weight-pack regression with:
 ```
 
 They remain part of `./tests/run.sh nnc`. User-facing quantized Linear examples
-live in `example/linear_fp4`, `example/linear_q8_0`,
+live in `example/linear_fp4`, `example/linear_mxfp4`, `example/linear_nvfp4`, `example/linear_q8_0`,
 `example/linear_fp8_e4m3fn`, and `example/linear_fp8_e5m2`.

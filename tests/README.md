@@ -77,7 +77,9 @@ Reports are in `tests/interface/build/`. Set `EDGE_INTERFACE_OUT` or
 | `example/fp4_debug` | scalar FP4 conversion, packing and storage |
 | `example/fp8_bf16_debug` | scalar BF16/FP8 arithmetic and floating-point console formatting |
 | `example/linear_fp4` | PyTorch/NNC FP4 model, generated C++ and packed weights, BF16 comparison |
-| `example/linear_q8_0` | same flow for K32 signed INT8 with BF16 scales |
+| `example/linear_mxfp4` | same flow for K32 E2M1 with E8M0 byte scales, no bias, zero-tolerance comparison |
+| `example/linear_nvfp4` | same flow for K16 E2M1 with E4M3FN byte scales and BF16 global scale, no bias, zero-tolerance comparison |
+| `example/linear_q8_0` | same flow for K32 signed INT8 with native FP16 scales |
 | `example/linear_fp8_e4m3fn` | same flow for FP8 E4M3FN |
 | `example/linear_fp8_e5m2` | same flow for FP8 E5M2 |
 | `example/llama` | flat, module-based Llama source and tracked C++ headers; regenerated binary payloads stay local; regression ownership stays with NNC |

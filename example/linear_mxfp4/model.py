@@ -1,0 +1,1 @@
+../../src/edge-nnc/example/linear_mxfp4/model.py

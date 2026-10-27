@@ -26,9 +26,12 @@ effective MAC utilization** on a 64x64x128 BF16 matmul, including packed weight
 DMA, circular weight loads, Tensor execution, and synchronization.
 
 See the [v0.3 release note](docs/releases/v0.3.md) for the SRAM scheduling,
-BF22 partial-sum and packed FP4/FP8 weight updates. Run the
+BF22 partial-sum, native MXFP4/NVFP4 and PyTorch module API updates. Run the
 named quantized Linear examples:
-[FP4](example/linear_fp4/README.md), [Q8_0](example/linear_q8_0/README.md),
+[FP4](example/linear_fp4/README.md),
+[MXFP4](example/linear_mxfp4/README.md),
+[NVFP4](example/linear_nvfp4/README.md),
+[Q8_0](example/linear_q8_0/README.md),
 [FP8 E4M3FN](example/linear_fp8_e4m3fn/README.md), and
 [FP8 E5M2](example/linear_fp8_e5m2/README.md).
 Each includes its PyTorch/NNC source model and generates the C++ and packed
@@ -93,8 +96,8 @@ PYTHON=.venv/bin/python ./example/llama/run.sh
 
 The flat [Llama example](example/llama/README.md) contains `model.py`,
 `main.cpp`, and tracked generated `forward.hpp` / `init.hpp`. The model imports
-reusable NNC modules for its custom ops. Llama binary payloads are regenerated
-locally and ignored by Git.
+reusable NNC modules for its custom ops and calls `nnc.compile()` explicitly.
+Llama binary payloads are regenerated locally and ignored by Git.
 
 Run the Qwen 3.6 layer:
 
@@ -108,76 +111,121 @@ preserves Q/K RMSNorm, the attention-output gate, SwiGLU MLP, and residual
 structure. See [`qwen36_coverage.md`](nnc/test/qwen36_coverage.md) for the
 current MVP coverage and next implementation steps.
 
-## PyTorch to ASIC RTL: Minimal Example
+## PyTorch to ASIC RTL with NNC
 
-The SiLU smoke test demonstrates the complete path with the smallest useful
-model.
+Import `nnc`, compose ordinary PyTorch modules with NNC modules, and call
+`nnc.compile()` to generate bare-metal C++ and packed weights. The module API
+wraps the existing function-form ops, so model code can use familiar
+`nn.Module` composition without declaring custom ops itself.
 
-### 1. Write and export a PyTorch model
+### 1. Compose and compile a model
+
+Run this Python example from the workspace root using `.venv/bin/python`:
 
 ```python
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import nnc
 
 
-class SmokeSilu(nn.Module):
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return F.silu(x)
+class QuantMLP(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nnc.LinearFp4(nn.Linear(64, 64, bias=False))
+        self.act = nn.SiLU()
+        self.fc2 = nnc.LinearNvFp4(nn.Linear(64, 16, bias=False))
+
+    def forward(self, x):
+        return self.fc2(self.act(self.fc1(x)))
 
 
-model = SmokeSilu().eval()
-example_args = (torch.randn(64, 64),)
-exported = torch.export.export(model, example_args)
+torch.manual_seed(0)
+model = QuantMLP().eval()
+x = ((torch.arange(9 * 64).reshape(9, 64) % 13 - 6).float() / 16).to(torch.bfloat16)
+nnc.compile(model, (x,), out_dir="build/nnc-demo", save_reference=True)
 ```
 
-NNC consumes the same model and example arguments. Internally it reads the
-`ExportedProgram`, maps the exported `aten.silu` node to the Edge operator, and
-infers the generated ABI and tensor shapes.
+The wrappers copy the original Linear weights into frozen BF16 inference
+parameters. NNC exports the composed graph, quantizes its static weights
+with the selected presets, and emits the corresponding runtime calls.
+`save_reference=True` also saves the quantized PyTorch model's BF16 output
+for simulator comparison.
 
-### 2. Generate bare-metal C++
+The available quantized Linear modules are:
 
-The compiler turns the exported graph into `forward.hpp`, `init.hpp`, and an
-optional `weight.bin`. The generated forward path contains a direct libnn call:
+| Module | Weight format and scales |
+| --- | --- |
+| `nnc.LinearFp4` | E2M1, K32 BF16 scales |
+| `nnc.LinearMxFp4` | E2M1, K32 E8M0 byte scales |
+| `nnc.LinearNvFp4` | E2M1, K16 E4M3FN byte scales plus a BF16-rounded global scale |
+| `nnc.LinearQ8_0` | signed INT8, K32 native FP16 scales |
+| `nnc.LinearFp8E4M3FN` | E4M3FN, K32 BF16 scales |
+| `nnc.LinearFp8E5M2` | E5M2, K32 BF16 scales |
 
-```cpp
-nnedge::op::silu(silu, x);
-```
+Each constructor currently accepts an ordinary `torch.nn.Linear`. N must be
+a positive multiple of 8; K must be divisible by the preset's group length.
+Optional bias is a separate BF16 add. See the runnable examples linked above
+for each format's complete source, saved artifacts and numerical contract.
 
-The generated headers are compiled with the shared C++ runtime into a
-freestanding RV32 ELF. There is no host-side PyTorch dependency in the target
-program.
+### 2. Build and run on public E3 RTL
 
-### 3. Run it on the Verilated RTL
-
-After the initial setup, one command generates the code, builds the RV32 image,
-runs it on the `edge-e3` Verilator model, and compares the BF16 output
-against PyTorch:
+The compile call writes `forward.hpp`, `init.hpp`, `input.bin`, `weight.bin`
+and `expected.bin`. Build and run this saved artifact set using the shared
+[minimal C++ main](src/edge-nnc/example/linear_fp4/main.cpp):
 
 ```sh
-PYTHON=.venv/bin/python ./example/llama/run.sh \
-  --model-file nnc/test/smoke_silu.py
+PYTHON=.venv/bin/python ./scripts/run-nnc.sh smoke \
+  --artifacts-dir build/nnc-demo \
+  --main-file src/edge-nnc/example/linear_fp4/main.cpp \
+  --build-dir build/nnc-demo/run
 ```
 
-Expected final result:
+The workspace supplies the E3/Edge32 SDKs, LLVM bare-metal build and public
+Verilator simulator. The runner compares all 144 BF16 outputs with the saved
+quantized reference and prints `TEST PASS` and `COMPARE PASS`. Saved-artifact
+replay does not import PyTorch. ELF files, simulator output and comparison
+dumps stay under `build/nnc-demo/run/`.
 
 ```text
-TEST PASS
-COMPARE PASS values=4096
-```
-
-Generated C++, weights, ELF, memory image, simulator output, and comparison logs
-are kept under `example/llama/build/smoke_silu/`.
-
-```text
-PyTorch model
-    -> torch.export
-    -> NNC graph lowering
-    -> generated bare-metal C++
+nn.Module model + example inputs
+    -> nnc.compile() (torch.export + NNC lowering)
+    -> generated C++ + packed weights + saved reference
     -> RV32 ELF
     -> Verilated edge-e3 RTL
-    -> BF16 comparison with PyTorch
+    -> BF16 comparison with the quantized PyTorch model
 ```
+
+### 3. Compile a complete model graph
+
+The same API is used throughout the [Llama 3 example](example/llama/model.py).
+Its attention projections, RMSNorm, RoPE, KV-cache interface, attention and
+feed-forward layers compose reusable NNC modules in a PyTorch `nn.Module`;
+residual paths and activations remain ordinary PyTorch expressions. Compile
+the whole example graph with:
+
+```python
+import nnc
+from example.llama.model import make_tiny_llama_block, make_example_args
+
+model = make_tiny_llama_block().eval()
+nnc.compile(model, make_example_args(), out_dir="build/llama3")
+```
+
+`PYTHON=.venv/bin/python ./example/llama/run.sh` generates, builds and runs
+that model end to end. The current public workload is a reduced Llama 3
+transformer block; its [README](example/llama/README.md) describes the model
+scope and runtime behavior. Module composition and `nnc.compile()` cover the
+full example graph, beyond a single quantized Linear layer.
+
+### Quantization API status
+
+The planned extension lets users choose their own quantization strategies,
+provided the resulting weights and scales satisfy an NNC op's supported
+format and packing contract. Current module constructors use NNC's preset
+quantizers; accepting an already user-quantized Linear in a constructor is
+**not yet implemented**. Existing lower-level function ops accept explicit
+static weights/scales for supported formats, but the complete user-facing
+quantized Linear construction API is still pending.
 
 ## Choose Your Path
 

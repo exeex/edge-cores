@@ -58,7 +58,7 @@ if __name__ == "__main__":
     nnc.compile(m, make_example_args(), out_dir=Path(__file__).parent)
 ```
 
-Unlike the four small quant Linear examples, this Llama example does not
+Unlike the six small quant Linear examples, this Llama example does not
 version `.bin` files. Its runner regenerates headers and payloads from the
 model on every run, builds them, and compares all 2048 output values with the
 PyTorch golden. This requires the repository PyTorch environment, LLVM and

@@ -37,7 +37,7 @@ if [[ "${group}" == all ]]; then
     run_case nnc "${SCRIPT_DIR}/nnc/run.sh"
     run_case interface "${SCRIPT_DIR}/interface/run.sh"
 fi
-for name in hello tensor actu fp4_debug fp8_bf16_debug linear_fp4 linear_q8_0 linear_fp8_e4m3fn linear_fp8_e5m2; do
+for name in hello tensor actu fp4_debug fp8_bf16_debug linear_fp4 linear_mxfp4 linear_nvfp4 linear_q8_0 linear_fp8_e4m3fn linear_fp8_e5m2; do
     run_case "${name}" "${REPO_ROOT}/example/${name}/run.sh"
 done
 echo "Report: ${OUT_DIR}/summary.tsv"
