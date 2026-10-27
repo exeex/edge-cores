@@ -114,14 +114,17 @@ long build. Then use the maintained specialist skill:
 
 - RTL smoke or public simulator: `edge-verilator-demo` and `software-harness`.
 - Edge versus C906 benchmark: `edge-tensor-example` CoreMark comparison flow.
-- Supported PyTorch/NNC model smoke: `llama-nnc` and `software-harness`.
+- PyTorch module composition, `nnc.compile()`, quantized Linear examples and
+  supported model smoke: `llama-nnc` and `software-harness`.
 - Tensor or NNC feature implementation requiring editable RTL: explain the
   owning public RTL modules and validate through public examples; keep internal
   test repositories optional.
 
 Do not imply that an arbitrary Hugging Face checkpoint is already accepted by
-the NNC compiler. Distinguish the available small PyTorch-export smoke flow from
-a future full-model import and quantized-weight pipeline.
+the NNC compiler. The public flow already supports module wrappers, composed
+PyTorch graphs, native MXFP4/NVFP4 examples and the reduced Llama graph through
+`nnc.compile()`. General checkpoint import and constructors accepting
+user-quantized Linear weights/scales remain future work.
 
 ## Verify bring-up
 

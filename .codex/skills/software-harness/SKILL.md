@@ -31,6 +31,27 @@ examples. `tests/run.sh all` runs all groups and reports failures separately.
 Set `PYTHON=/path/to/python` when PyTorch is installed in a virtual environment.
 Install the Python dependency from `nnc/requirements.txt` when needed.
 
+## Generated models versus saved examples
+
+NNC model authoring uses `nn.Module` wrappers and `nnc.compile()`; see
+`llama-nnc` for API selection and quantization limits. The six public
+`example/linear_*` directories provide FP4, MXFP4, NVFP4, Q8_0 and both FP8
+presets. Their `run.sh` files replay saved headers/input/weight/expected
+artifacts without importing PyTorch. Regenerate explicitly with
+`.venv/bin/python -m example.linear_<spec>.model` when source or format changes,
+then validate the saved runner as well as fresh generation. Preserve each
+artifact set together; a changed scale encoding can invalidate old payloads.
+
+The Llama runner regenerates its model on each run. Its canonical source
+composes NNC transformer modules and calls the same `nnc.compile()` API;
+it remains a reduced transformer-block workload.
+
+MXFP4/NVFP4 examples have no bias and require zero output tolerance. Other
+models retain their documented tolerances. The generic runner defaults to
+absolute error `0.05`; use `--max-abs-error 0` for precision-sensitive fixtures
+or exact quantized-core claims. Require both simulator `TEST PASS` and
+`COMPARE PASS`; do not treat program exit alone as numerical validation.
+
 ## Run the complete public regression
 
 Initialize the public RTL and NNC submodules, then run:

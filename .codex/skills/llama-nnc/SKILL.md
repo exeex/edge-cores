@@ -1,12 +1,11 @@
 ---
 name: llama-nnc
-description: Develop and profile the edge-e3 PyTorch-to-NNC flow, including nnc/compiler.py lowering and generated ABI, example/llama smoke models, cpp/libnn runtime operators, BF16 correctness checks, and per-node cycle reports on the public E3 Verilator core.
+description: Compose and compile PyTorch models with NNC modules and nnc.compile(), run quantized Linear and Llama examples on public E3 RTL, or develop and profile the NNC compiler/runtime. Use for module wrappers, quantization API questions, model lowering and BF16 correctness.
 ---
 
-# Llama NNC
+# NNC Models and Compiler
 
-Keep this repository's NNC path bare-metal-only and runnable with the public
-public E3 RTL.
+Keep this repository's NNC path bare-metal-only and runnable with public E3 RTL.
 
 The compiler and matched runtime are maintained in the `src/edge-nnc`
 submodule. Initialize it with `git submodule update --init src/edge-nnc`.
@@ -34,11 +33,35 @@ Do not add an example-local libnn, startup, host runner, `NNEDGE_HOST` branch,
 private RTL dependency, or old CMake harness. Use `cpp/libnn/`,
 `cpp/baremetal/`, and `scripts/build-verilator.sh`.
 
+## Use the public module API
+
+For model authoring, start with `import nnc`, compose `nn.Module` wrappers
+around ordinary `torch.nn.Linear` layers, and call
+`nnc.compile(model.eval(), example_args, out_dir=...)`. Reuse existing NNC
+modules instead of redeclaring their custom ops in each model. Function-form
+ops remain available for explicit static code/scale fixtures.
+
+Read [references/module-api.md](references/module-api.md) for the six quant
+Linear presets, generation/replay commands and current custom-quantization
+limits. Use the root README's composed model demo and the canonical Llama
+model as working examples. The Llama graph uses `Linear`, `RMSNorm`, `RoPE`,
+`KVCacheUpdate` and `Attention` modules; its public workload remains a reduced
+transformer block.
+
+Current quantized constructors accept an ordinary `torch.nn.Linear` and use
+preset quantizers. A constructor accepting user-quantized Linear weights and
+scales is not implemented. Present user-defined quantization strategies as
+the planned direction, subject to supported op/packing contracts.
+
 ## Development workflow
 
 For a semantic operator change:
 
-1. Define or update its PyTorch custom op in `nnc/test/smoke_<op>.py`.
+1. Reuse the registered op where possible. For a new semantic op, implement
+   registration/reference/fake behavior in the owning NNC module (`fp4.py`,
+   `quant.py`, `microscale.py` or `ops.py`), and add a focused NNC smoke fixture.
+   Add a reusable module wrapper in `nnc/modules.py` or `nnc/transformer.py`
+   when the operation needs a model-authoring interface.
 2. Update target mapping in `nnc/graph.py`, lowering metadata and shape
    inference in `nnc/lowering.py`, or weight packing in `nnc/weights.py` only
    where needed.
@@ -121,5 +144,8 @@ The flat Llama example versions generated `forward.hpp` and `init.hpp` beside
 `model.py` and `main.cpp`; its runner regenerates them using `--generated-dir`.
 Local `.bin` files are ignored. ELF files, logs and profiles belong under
 `example/llama/build/`; shared-harness outputs remain under
-`src/edge-nnc/example/llama/build/`. The four small quant Linear examples also
+`src/edge-nnc/example/llama/build/`. The six small quant Linear examples also
 version their input/weight/expected `.bin` snapshots for Torch-free replay.
+Their models and minimal mains belong to NNC, with workspace symlinks;
+saved artifacts, documentation and run adapters belong to the workspace.
+Keep each header/binary artifact set consistent with the pinned runtime.

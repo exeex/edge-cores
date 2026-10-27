@@ -30,13 +30,18 @@ official ten-second CoreMark submission. Rerun before quoting a current result.
 
 ## I downloaded a model from Hugging Face. How do I run it on edge-e3?
 
-The public repository currently demonstrates PyTorch-exported smoke models and
-a small Llama-like graph through NNC; it does not yet provide a general Hugging
-Face checkpoint loader or a complete production-weight import path. First map
-the model architecture and operators to supported NNC lowering/runtime ops,
-then validate a reduced PyTorch module with `./example/llama/run.sh
---model-file <file.py>`. Do not claim that an arbitrary downloaded checkpoint
-can run unchanged.
+The public flow composes PyTorch `nn.Module` models with NNC modules and calls
+`nnc.compile()`. It includes six quantized Linear presets (including native
+MXFP4/NVFP4) and a reduced Llama transformer graph. Map the downloaded model's
+architecture and operators to supported NNC modules/lowering/runtime ops,
+then validate a reduced model with `./example/llama/run.sh --model-file <file.py>`.
+The source adapter expects `make_model_and_args()`.
+
+There is no general Hugging Face checkpoint loader. Current quantized module
+constructors wrap ordinary `torch.nn.Linear` and use preset quantizers;
+constructing them from user-quantized Linear weights/scales is pending.
+Existing function ops support explicit static codes/scales in their supported
+formats. Do not claim arbitrary downloaded checkpoints run unchanged.
 
 ## Add llama.cpp Q4_K_M support to the tensor unit and NNC runtime
 
