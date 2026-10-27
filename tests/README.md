@@ -5,10 +5,10 @@ the workspace root; set `PYTHON=.venv/bin/python` for NNC's PyTorch environment.
 
 | Group | Command | Owner and purpose |
 | --- | --- | --- |
-| NNC Python | `./tests/run.sh nnc-unit` | `src/edge-nnc/nnc/test_*.py`: compiler, lowering, packing and FP4 unit tests; no RTL required |
-| NNC integration | `./tests/run.sh nnc` | NNC unit tests, every NNC-owned `smoke_*.py`, then the Llama profile; this workspace supplies the Edge32 includes and public simulator |
+| NNC Python | `./tests/run.sh nnc-unit` | `src/edge-nnc/nnc/test_*.py`: compiler, lowering and quantized weight packing tests; no RTL required |
+| NNC integration | `./tests/run.sh nnc` | NNC unit tests, every NNC-owned `smoke_*.py`, then the Llama profile and NNC-owned packed C++ regressions; this workspace supplies the Edge32 includes and public simulator |
 | Software/hardware interface | `./tests/run.sh interface` | Workspace filelist checks and direct NNC matmul execution via `libnn/ops.hpp` against the pinned public RTL; no PyTorch or compiler lowering |
-| Runnable examples | `./tests/run.sh examples` | hello, tensor, ACTU, scalar FP4/FP8 and packed Tensor formats, each with its existing correctness checks |
+| Runnable examples | `./tests/run.sh examples` | hello, tensor, ACTU, scalar FP4/FP8 and named quant Linear examples, each with its existing correctness checks |
 | Complete public regression | `./tests/run.sh all` | All three groups, continuing after failures and returning nonzero if any group fails |
 
 `./tests/run.sh --list` lists these routes. The `examples` and `all` runs
@@ -26,6 +26,10 @@ this repository's `example/` directory. `tests/nnc/run.sh` calls that package's
 unit discovery and `nnc/run_harness.py` through `scripts/run-nnc.sh`; it has no
 local model list or tolerance overrides. Both phases run even if one fails.
 Extra arguments to `tests/run.sh nnc` are passed to NNC's model harness.
+`tests/nnc/packed.sh` supplies the workspace build and simulator adapter for
+NNC's `packed_wsld_main.cpp` (26 configurations) and `weight_pack_main.cpp`
+(16 configurations). Low-level packing and DMA tests live with NNC rather
+than in the user-facing Linear examples.
 
 `example/llama/test.sh` remains a compatibility entry point for this group.
 The user-facing Llama model and C++ main are symlinks to the canonical NNC
@@ -71,7 +75,10 @@ Reports are in `tests/interface/build/`. Set `EDGE_INTERFACE_OUT` or
 | `example/actu` | direct ACTU commands, BF16 output and throughput measurement |
 | `example/fp4_debug` | scalar FP4 conversion, packing and storage |
 | `example/fp8_bf16_debug` | scalar BF16/FP8 arithmetic and floating-point console formatting |
-| `example/tensor_formats` | packed BF16/INT8/FP4/FP8, configurable BF16 scale groups and direct FP4 Linear/BF22 examples with frozen NNC data |
+| `example/linear_fp4` | PyTorch/NNC FP4 model, generated C++ and packed weights, BF16 comparison |
+| `example/linear_q8_0` | same flow for K32 signed INT8 with BF16 scales |
+| `example/linear_fp8_e4m3fn` | same flow for FP8 E4M3FN |
+| `example/linear_fp8_e5m2` | same flow for FP8 E5M2 |
 | `example/llama` | user-facing NNC example; regression ownership stays with NNC |
 | `example/coremark` | scalar benchmark, run separately |
 

@@ -27,8 +27,12 @@ DMA, circular weight loads, Tensor execution, and synchronization.
 
 See the [v0.3 release note](docs/releases/v0.3.md) for the SRAM scheduling,
 BF22 partial-sum and packed FP4/FP8 weight updates. Run the
-[Tensor formats examples](example/tensor_formats/README.md) with
-`./example/tensor_formats/run.sh`.
+named quantized Linear examples:
+[FP4](example/linear_fp4/README.md), [Q8_0](example/linear_q8_0/README.md),
+[FP8 E4M3FN](example/linear_fp8_e4m3fn/README.md), and
+[FP8 E5M2](example/linear_fp8_e5m2/README.md).
+Each includes its PyTorch/NNC source model and generates the C++ and packed
+weights through NNC.
 
 ## Run Llama 3 and Qwen 3.6 on edge-e3 ASIC RTL
 

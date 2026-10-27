@@ -2,7 +2,7 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-OUT_DIR="${EDGE_TENSOR_FORMATS_OUT:-${SCRIPT_DIR}/build}"
+OUT_DIR="${EDGE_PACKED_TEST_OUT:-${SCRIPT_DIR}/build/packed}"
 SIM_EXE="${EDGE_VERILATOR_OUT:-${REPO_ROOT}/build/verilator}/obj/Vedge_soc_demo_tb"
 if [[ $# -gt 1 || ( $# -eq 1 && "$1" != --skip-verilator-build ) ]]; then
     echo "usage: $0 [--skip-verilator-build]" >&2; exit 2
@@ -16,11 +16,10 @@ if [[ $# -eq 0 ]]; then
 fi
 printf 'case\tstatus\tlog\n' > "${OUT_DIR}/summary.tsv"
 status=0
-for name in packed weight_pack group32 group64 precision ring_wrap; do
+for name in packed weight_pack; do
     case_dir="${OUT_DIR}/${name}"
     mkdir -p "${case_dir}"
-    source="${SCRIPT_DIR}/${name}/main.cpp"
-    if [[ "${name}" == packed ]]; then source="${SCRIPT_DIR}/packed.cpp"; fi
+    source="${REPO_ROOT}/src/edge-nnc/nnc/test/packed_wsld_main.cpp"
     if [[ "${name}" == weight_pack ]]; then source="${REPO_ROOT}/src/edge-nnc/nnc/test/weight_pack_main.cpp"; fi
     if ! "${REPO_ROOT}/scripts/build-cpp-example.sh" "${source}" "${case_dir}" "${name}" >"${case_dir}/build.log" 2>&1; then
         cat "${case_dir}/build.log" >&2; exit 1

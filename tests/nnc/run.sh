@@ -6,4 +6,5 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 status=0
 "${REPO_ROOT}/scripts/run-nnc.sh" unit || status=1
 "${REPO_ROOT}/scripts/run-nnc.sh" harness "$@" || status=1
+"${REPO_ROOT}/tests/nnc/packed.sh" --skip-verilator-build || status=1
 exit "${status}"

@@ -1,0 +1,1 @@
+../../src/edge-nnc/example/linear_q8_0/main.cpp

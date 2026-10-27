@@ -11,7 +11,7 @@ case "${group}" in
             'nnc-unit: NNC-owned Python compiler and FP4 tests' \
             'nnc: NNC unit tests + all model smokes + Llama profile (workspace RTL adapter)' \
             'interface: standalone NNC matmul via libnn/ops.hpp against workspace intrinsics and public RTL' \
-            'examples: hello, tensor, ACTU, scalar FP4/FP8 and packed Tensor formats' \
+            'examples: hello, tensor, ACTU, scalar FP4/FP8 and named quant Linear examples' \
             'all: nnc + interface + examples' \
             'benchmark (separate): example/coremark/run-edge.sh and run-c906.sh'
         exit 0 ;;
@@ -37,7 +37,7 @@ if [[ "${group}" == all ]]; then
     run_case nnc "${SCRIPT_DIR}/nnc/run.sh"
     run_case interface "${SCRIPT_DIR}/interface/run.sh"
 fi
-for name in hello tensor actu fp4_debug fp8_bf16_debug tensor_formats; do
+for name in hello tensor actu fp4_debug fp8_bf16_debug linear_fp4 linear_q8_0 linear_fp8_e4m3fn linear_fp8_e5m2; do
     run_case "${name}" "${REPO_ROOT}/example/${name}/run.sh"
 done
 echo "Report: ${OUT_DIR}/summary.tsv"
