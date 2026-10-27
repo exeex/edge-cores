@@ -2,7 +2,7 @@
 
 [model.py](model.py) is the original PyTorch/NNC model: BF16 input `[9,64]`,
 Q8_0 weights `[16,64]`, and BF16 output `[9,16]`. Each output lane has
-one BF16 scale per K32 group (`nnedge::Q8_0WeightPack`).
+one native FP16 scale per K32 group (`nnedge::Q8_0WeightPack`).
 
 ```sh
 ./example/linear_q8_0/run.sh
@@ -53,5 +53,6 @@ Use `--build-only` to build the saved artifacts without simulation, or
 `--skip-verilator-build` to reuse the current simulator. `--profile` reports
 cycles for the Linear and optional bias nodes.
 
-Q8_0 uses BF16 scales and E3 tile order here. Raw GGUF Q8_0 blocks with FP16
-scales require conversion before use.
+Q8_0 preserves native FP16 scale bits and INT8 codes in E3 tile order.
+Extracted Q8_0 row blocks require repacking before use; there is no GGUF
+file importer. See the [public format contract](../../src/edge-nnc/QUANT_LINEAR.md).

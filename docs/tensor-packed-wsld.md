@@ -33,8 +33,9 @@ edge_tensor_wsld_circular<false, 8, EDGE_TENSOR_WTYPE_FP4, 8>();
 ```
 
 The first configuration has Q8_0-style group length and dequantization
-`w = scale*q`; it needs conversion from llama.cpp's FP16-scaled Q8_0 file
-layout to BF16 scales and E3 tile order. See the
+`w = scale*q`, but this direct tutorial deliberately uses BF16 scales.
+The named `linear_q8_0` runtime instead preserves native FP16 scale bits
+using `stype=3` and repacks the row blocks into E3 tile order. See the
 [release note](releases/v0.3.md#q8_0-style-configuration).
 The examples use already encoded representable weights, so they check
 packing, loading and execution rather than quantizer quality or GGUF import.

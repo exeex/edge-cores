@@ -2,8 +2,10 @@
 
 extern "C" int main(void)
 {
-    static const char message[] = "Hello from edge-e3!\n";
-    for (const char *cursor = message; *cursor != '\0'; ++cursor)
+    // Volatile keeps this writable initializer in .data, exercising ROM-to-RAM startup.
+    static volatile char message[] = "hello from edge-e3!\n";
+    message[0] = 'H';
+    for (const volatile char *cursor = message; *cursor != '\0'; ++cursor)
         edge_sim_putchar(*cursor);
     return 0;
 }

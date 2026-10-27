@@ -18,3 +18,7 @@ terminal shows the program's `printf` console directly. Simulation output is
 also saved to `build/run.log`. See the
 [FP8/BF16 debug example](../fp8_bf16_debug/README.md) for floating-point
 formatting and low-precision conversion tests.
+
+The message is a volatile writable literal array in `.data`. Startup copies
+its initializer from ROM to RAM, and `main()` changes its first character
+before printing, so this example also checks initialized writable storage.
