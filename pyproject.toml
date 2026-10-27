@@ -4,7 +4,7 @@ version = "0.0.0"
 description = "Python environment for the Edge RV NNC and software harness"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "transformers>=4.57.1",
+    "edge-nnc",
 ]
 
 [project.optional-dependencies]
@@ -33,6 +33,7 @@ conflicts = [
 ]
 
 [tool.uv.sources]
+edge-nnc = { path = "src/edge-nnc", editable = true }
 torch = [
     { index = "pytorch-cpu", extra = "cpu" },
     { index = "pytorch-cu126", extra = "cu126" },

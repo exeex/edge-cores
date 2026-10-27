@@ -22,19 +22,23 @@ examples. `tests/run.sh all` runs all groups and reports failures separately.
 - For console/startup changes, run `./example/hello/run.sh`.
 - For intrinsic or Tensor datapath changes, run `./example/tensor/run.sh`.
 - For one NNC model, run
-  `./example/llama/run.sh --model-file nnc/test/smoke_<op>.py`.
+  `./example/llama/run.sh --model-file src/edge-nnc/nnc/test/smoke_<op>.py`.
 - For NNC compiler/runtime, Matmul, Attention, DMA layout, or composed-model
   changes, run the complete Llama suite with `./example/llama/test.sh`.
 - For public RTL, SRAM, SoC wrapper, or testbench changes, first run
   `./scripts/build-verilator.sh`, then the relevant software cases.
 
-Set `PYTHON=/path/to/python` when PyTorch is installed in a virtual environment.
-Install the Python dependency from `nnc/requirements.txt` when needed.
+Run `./scripts/setup-python.sh` before NNC work: it creates Python 3.12 `.venv`,
+selects the PyTorch CPU/CUDA backend and installs `src/edge-nnc` editable.
+NNC runners default to this interpreter. Use `UV_PROJECT_ENVIRONMENT` for a
+separate setup environment, or `PYTHON=/absolute/path/bin/python` to select
+an already prepared environment. Both `torch` and `nnc` must import there;
+do not rely on the system Python or a root symlink.
 
 ## Generated models versus saved examples
 
 NNC model authoring uses `nn.Module` wrappers and `nnc.compile()`; see
-`llama-nnc` for API selection and quantization limits. The six public
+`edge-nnc` for API selection and quantization limits. The six public
 `example/linear_*` directories provide FP4, MXFP4, NVFP4, Q8_0 and both FP8
 presets. Their `run.sh` files replay saved headers/input/weight/expected
 artifacts without importing PyTorch. Regenerate explicitly with
@@ -59,7 +63,7 @@ Initialize the public RTL and NNC submodules, then run:
 ```sh
 git submodule status src/edge-e3
 git submodule status src/edge-asic
-python3 -m unittest nnc.test_compiler
+PYTHON=.venv/bin/python ./tests/run.sh nnc-unit
 ./example/hello/run.sh
 ./example/tensor/run.sh
 ./example/llama/test.sh
@@ -73,10 +77,10 @@ The public regression must not require private test repositories.
 `example/llama/test.sh` must:
 
 - build the workspace simulator once, then reuse it for each model;
-- discover every `nnc/test/smoke_*.py` without a skip list;
+- discover every `src/edge-nnc/nnc/test/smoke_*.py` without a skip list;
 - run each model in an isolated Python process and compare its BF16 output with
   the PyTorch golden;
-- verify `nnc/test/llama3_source.py` matches the user-facing
+- verify `src/edge-nnc/nnc/test/llama3_source.py` matches the user-facing
   `example/llama/model.py`, then run the test copy with
   `--profile`;
 - continue after individual failures so the final report is complete;
@@ -85,7 +89,7 @@ The public regression must not require private test repositories.
 Do not replace a failing semantic test by loosening tolerance, changing its
 golden layout, or adding a skip. Remove a model only when the user identifies it
 as obsolete. Preserve PyTorch-contiguous public tensor layouts; accelerator
-packing belongs inside an operator. Use the `llama-nnc` skill for detailed NNC
+packing belongs inside an operator. Use the `edge-nnc` skill for detailed NNC
 lowering and memory rules.
 
 ## Require and inspect reports
@@ -106,7 +110,7 @@ simulation cycles. Allocation, copies, startup, and printf are excluded.
 ## Diagnose failures
 
 1. Read the failing model log before rerunning it alone.
-2. Reproduce one model with `nnc/run_smoke.py --model-file ...`.
+2. Reproduce one model with `src/edge-nnc/nnc/run_smoke.py --model-file ...`.
 3. Distinguish export/lowering, RISC-V build, simulator, return status, and BF16
    comparison failures.
 4. For a missing simulator, verify the workspace build path. Set a distinct

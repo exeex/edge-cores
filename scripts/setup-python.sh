@@ -5,6 +5,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REQUESTED_BACKEND="${1:-${EDGE_TORCH_BACKEND:-auto}}"
 
+if [[ $# -gt 1 ]]; then
+    echo "usage: $0 [auto|cpu|cu126|cu130|cu132]" >&2
+    exit 2
+fi
+if [[ ! -f "${REPO_ROOT}/src/edge-nnc/nnc/__init__.py" ]]; then
+    echo "error: initialize NNC: git submodule update --init src/edge-nnc" >&2
+    exit 1
+fi
+if ! command -v uv >/dev/null 2>&1; then
+    echo "error: install uv: https://docs.astral.sh/uv/getting-started/installation/" >&2
+    exit 1
+fi
+
 usage() {
     echo "usage: $0 [auto|cpu|cu126|cu130|cu132]" >&2
     exit 2
@@ -60,12 +73,25 @@ VENV_DIR="${UV_PROJECT_ENVIRONMENT:-${REPO_ROOT}/.venv}"
 if [[ "${VENV_DIR}" != /* ]]; then
     VENV_DIR="${REPO_ROOT}/${VENV_DIR}"
 fi
-"${VENV_DIR}/bin/python" - "${BACKEND}" <<'PY'
+"${VENV_DIR}/bin/python" - "${BACKEND}" "${REPO_ROOT}/src/edge-nnc" <<'PY'
+import json
 import sys
+from importlib.metadata import distribution
+from pathlib import Path
+from urllib.parse import unquote, urlparse
+import nnc
 import torch
 
 backend = sys.argv[1]
+checkout = Path(sys.argv[2]).resolve()
+origin = json.loads(distribution("edge-nnc").read_text("direct_url.json") or "{}")
+source = Path(unquote(urlparse(origin.get("url", "")).path)).resolve()
+if not origin.get("dir_info", {}).get("editable") or source != checkout:
+    raise SystemExit(f"error: edge-nnc must be editable from {checkout}")
+if Path(nnc.__file__).resolve() != checkout / "nnc/__init__.py":
+    raise SystemExit(f"error: unexpected nnc import: {nnc.__file__}")
 print(f"Python: {sys.executable}")
+print(f"NNC (editable): {nnc.__file__}")
 print(f"PyTorch: {torch.__version__}")
 print(f"PyTorch CUDA: {torch.version.cuda}")
 print(f"CUDA available: {torch.cuda.is_available()}")
@@ -76,3 +102,5 @@ if backend.startswith("cu"):
 elif torch.version.cuda is not None:
     raise SystemExit("error: CPU backend selected but a CUDA PyTorch build was installed")
 PY
+echo "Use: ${VENV_DIR}/bin/python"
+echo "Activate: source ${VENV_DIR}/bin/activate"

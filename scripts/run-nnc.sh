@@ -5,9 +5,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 NNC_ROOT="${REPO_ROOT}/src/edge-nnc"
-PYTHON="${PYTHON:-python3}"
+VENV_DIR="${UV_PROJECT_ENVIRONMENT:-${REPO_ROOT}/.venv}"
+if [[ "${VENV_DIR}" != /* ]]; then VENV_DIR="${REPO_ROOT}/${VENV_DIR}"; fi
+PYTHON="${PYTHON:-${VENV_DIR}/bin/python}"
 if [[ "${PYTHON}" == */* && "${PYTHON}" != /* ]]; then
     PYTHON="${PWD}/${PYTHON}"
+fi
+if ! command -v "${PYTHON}" >/dev/null 2>&1; then
+    echo "error: Python environment missing; run ./scripts/setup-python.sh or set PYTHON" >&2
+    exit 1
 fi
 SIM_EXE="${EDGE_VERILATOR_OUT:-${REPO_ROOT}/build/verilator}/obj/Vedge_soc_demo_tb"
 
@@ -15,6 +21,25 @@ if [[ ! -f "${NNC_ROOT}/nnc/run_smoke.py" ]]; then
     echo "error: initialize NNC: git submodule update --init src/edge-nnc" >&2
     exit 1
 fi
+
+# Check metadata without importing torch, so saved-artifact replay stays lightweight.
+"${PYTHON}" - "${NNC_ROOT}" <<'PY'
+import json
+import sys
+from importlib.metadata import PackageNotFoundError, distribution
+from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+try:
+    distribution("torch")
+    origin = json.loads(distribution("edge-nnc").read_text("direct_url.json") or "{}")
+except PackageNotFoundError:
+    raise SystemExit("error: selected Python needs PyTorch and editable NNC; run ./scripts/setup-python.sh")
+checkout = Path(sys.argv[1]).resolve()
+source = Path(unquote(urlparse(origin.get("url", "")).path)).resolve()
+if not origin.get("dir_info", {}).get("editable") or source != checkout:
+    raise SystemExit(f"error: selected Python needs editable NNC from {checkout}; run ./scripts/setup-python.sh")
+PY
 
 mode="${1:?expected unit, smoke or harness}"
 shift

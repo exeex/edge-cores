@@ -1,8 +1,17 @@
 # Public NNC module and artifact workflow
 
-Run commands from the edge-cores workspace root. Model authoring and explicit
-regeneration require its PyTorch environment; saved-artifact replay requires
-Python, LLVM and the public RTL simulator, without importing PyTorch.
+Run commands from the edge-cores workspace root. Both generation and replay
+use its prepared Python environment with PyTorch and editable `edge-nnc`.
+Saved-artifact replay does not import/evaluate PyTorch, but the shell runner
+still requires installed PyTorch and editable NNC distribution metadata.
+LLVM and the public RTL simulator are supplied by the workspace.
+
+Run `./scripts/setup-python.sh` first. It installs PyTorch plus editable NNC
+from `src/edge-nnc` into Python 3.12 `.venv`. Run Python snippets with
+`.venv/bin/python`, or activate that environment. `import nnc` works outside
+the repository too; no `PYTHONPATH` or root symlink is needed. Shell adapters
+default to the project interpreter and accept `PYTHON` overrides; use
+`UV_PROJECT_ENVIRONMENT` consistently for an alternate setup environment.
 
 ## Choose a module
 
@@ -47,9 +56,12 @@ nnc.compile(model.eval(), example_args, out_dir="build/nnc-model", save_referenc
 
 The outputs are `forward.hpp`, `init.hpp`, `input.bin`, `weight.bin` and,
 with `save_reference=True`, the quantized reference `expected.bin`.
+The saved-reference API currently accepts one Tensor output, or a singleton
+tuple containing one Tensor. It does not build an ELF or run RTL itself;
+the workspace runner performs those steps.
 
 ```sh
-PYTHON=.venv/bin/python ./scripts/run-nnc.sh smoke \
+./scripts/run-nnc.sh smoke \
   --artifacts-dir build/nnc-model \
   --main-file src/edge-nnc/example/linear_mxfp4/main.cpp \
   --build-dir build/nnc-model/run --max-abs-error 0
@@ -62,20 +74,24 @@ saved headers: quoted includes search that directory before `-I` paths.
 
 The six workspace `example/linear_*` runners replay their saved artifacts.
 Regenerate a specific example explicitly with
-`.venv/bin/python -m example.linear_mxfp4.model` (substitute the spec).
+`.venv/bin/python -m example.linear_mxfp4.model` (substitute the spec and use
+the selected environment's interpreter if it differs from `.venv`).
 Preserve the two headers and three binaries together. Check both regenerated
 execution and saved replay when a quantization or scale encoding changes.
 
 For source-model tests use `scripts/run-nnc.sh smoke --model-file <file.py>`;
 the source exposes `make_model_and_args()`. This route generates fresh
-artifacts. NNC owns canonical model/main sources and `nnc/test/smoke_*.py`
+artifacts. NNC owns canonical model/main sources and `src/edge-nnc/nnc/test/smoke_*.py`
 fixtures; workspace examples link to them and own saved artifact sets/runners.
 `tests/run.sh nnc` discovers the source fixtures; `tests/run.sh examples`
 independently checks saved examples.
 
 ## API and numerical boundaries
 
-- Constructors accept ordinary `torch.nn.Linear` and select built-in presets.
+- Transformer wrappers retain the reduced ops' current behavior:
+  `KVCacheUpdate` is a prefill pass-through, and `Attention` is unscaled and
+  unmasked. These wrappers do not establish stateful decoding-cache support.
+- Quantized Linear constructors accept ordinary `torch.nn.Linear` and select built-in presets.
   A constructor accepting an already user-quantized Linear is not implemented.
 - User-defined quantization strategies are planned, constrained by supported
   op encodings, shapes and packing contracts. Function-form ops already

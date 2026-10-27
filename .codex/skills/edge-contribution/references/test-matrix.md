@@ -11,7 +11,7 @@ multiple rows.
 | Tensor/DMA/accelerator instruction path | Verilator build and `./example/tensor/run.sh`; add ACTU when shared command/snapshot logic changes |
 | ACTU/CMPU or shared accelerator I/O | Verilator build and `./example/actu/run.sh`; add tensor for shared paths |
 | C++ intrinsic or bare-metal runtime | Relevant example plus hello; inspect emitted instruction encoding when changed |
-| NNC compiler lowering | `python3 -m unittest nnc.test_compiler` and the affected smoke model |
+| NNC compiler lowering | `PYTHON=.venv/bin/python ./tests/run.sh nnc-unit` and the affected smoke model |
 | NNC runtime, tensor layout, allocator, DMA layout, or composed model | Python unit tests and `./example/llama/test.sh` |
 | Public RTL source integration | Public build and examples without private test repositories |
 
@@ -22,7 +22,7 @@ cross-layer changes:
 
 ```sh
 git submodule status src/edge-e3
-python3 -m unittest nnc.test_compiler
+PYTHON=.venv/bin/python ./tests/run.sh nnc-unit
 ./example/hello/run.sh
 ./example/tensor/run.sh
 ./example/actu/run.sh

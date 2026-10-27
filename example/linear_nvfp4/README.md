@@ -24,7 +24,8 @@ for scale selection, BF22 arithmetic and storage limits.
 
 ## Run the saved example
 
-From the workspace root:
+From the workspace root, first run `./scripts/setup-python.sh` to install PyTorch and editable NNC in
+the project `.venv`; the runner uses this environment by default.
 
 ```sh
 ./example/linear_nvfp4/run.sh

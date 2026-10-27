@@ -16,7 +16,8 @@ See the [release note](docs/releases/v0.3.md) for format details and scope.
 
 ## PyTorch to ASIC RTL with NNC
 
-Compose supported PyTorch/NNC modules and compile the whole graph:
+After [setup](#setup), use `.venv/bin/python` or activate `.venv` to compose
+supported PyTorch/NNC modules and compile the whole graph:
 
 ```python
 import torch
@@ -39,7 +40,7 @@ For runnable models, saved artifacts and simulator runners, see the examples:
 | Quantized Linear | Composed models |
 | --- | --- |
 | [MXFP4](example/linear_mxfp4/README.md) · [NVFP4](example/linear_nvfp4/README.md) | [Llama 3 transformer block](example/llama/README.md) |
-| [FP4](example/linear_fp4/README.md) · [Q8_0](example/linear_q8_0/README.md) | [Reduced Qwen 3.6 layer](nnc/test/qwen36_coverage.md) |
+| [FP4](example/linear_fp4/README.md) · [Q8_0](example/linear_q8_0/README.md) | [Reduced Qwen 3.6 layer](src/edge-nnc/nnc/test/qwen36_coverage.md) |
 | [FP8 E4M3FN](example/linear_fp8_e4m3fn/README.md) · [FP8 E5M2](example/linear_fp8_e5m2/README.md) | |
 
 ## Setup
@@ -47,6 +48,7 @@ For runnable models, saved artifacts and simulator runners, see the examples:
 Use the [edge-bringup skill](.codex/skills/edge-bringup/SKILL.md) for macOS or
 Ubuntu dependencies, public submodules and initial smoke tests. In Codex,
 ask: **Use `$edge-bringup` to set up this machine.**
+`scripts/setup-python.sh` installs PyTorch and editable NNC into `.venv`.
 
 ## Performance Snapshot
 

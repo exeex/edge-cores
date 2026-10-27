@@ -21,8 +21,8 @@ available for compatibility. The NNC smoke suite links to the same model.
 ## Model modules
 
 The model imports `Linear`, `RMSNorm`, `RoPE`, `KVCacheUpdate`, and `Attention`
-from `nnc`. Their implementations live in `nnc/transformer.py`, with custom-op
-registration and fake implementations in `nnc/ops.py`.
+from `nnc`. Their implementations live in `src/edge-nnc/nnc/transformer.py`, with custom-op
+registration and fake implementations in `src/edge-nnc/nnc/ops.py`.
 
 ```python
 from nnc import Linear, RMSNorm, RoPE, KVCacheUpdate, Attention
@@ -49,6 +49,10 @@ pass-through, as in the original reduced model.
 .venv/bin/python -m example.llama.model
 PYTHON=.venv/bin/python ./example/llama/run.sh
 ```
+
+Setup installs PyTorch and editable NNC from `src/edge-nnc` into `.venv`.
+Use `.venv/bin/python` or activate that environment for `import nnc`;
+the runner defaults to the project interpreter without a root symlink.
 
 The model's visible entry point is:
 
@@ -80,8 +84,8 @@ simulator.
 Other source models remain supported through the general smoke adapter:
 
 ```sh
-PYTHON=.venv/bin/python ./example/llama/run.sh --model-file nnc/test/smoke_silu.py
-PYTHON=.venv/bin/python ./example/llama/run.sh --model-file nnc/test/qwen36_source.py
+PYTHON=.venv/bin/python ./example/llama/run.sh --model-file src/edge-nnc/nnc/test/smoke_silu.py
+PYTHON=.venv/bin/python ./example/llama/run.sh --model-file src/edge-nnc/nnc/test/qwen36_source.py
 ```
 
 Those calls use isolated `example/llama/build/<model-name>/generated/`
@@ -93,7 +97,7 @@ artifacts and the generic NNC main, so they do not replace the Llama headers.
 PYTHON=.venv/bin/python ./tests/run.sh nnc
 ```
 
-NNC owns Python tests, all `nnc/test/smoke_*.py` models, Llama profiling and the
+NNC owns Python tests, all `src/edge-nnc/nnc/test/smoke_*.py` models, Llama profiling and the
 low-level packed-weight C++ test sources. The workspace supplies the public
 SDK, simulator, startup and test adapters. Suite reports remain under
 `src/edge-nnc/example/llama/build/harness/`, with the suite's Llama profile in

@@ -1,7 +1,10 @@
 # Public software regression routing
 
 Tests are grouped by ownership and by the boundary they validate. Run from
-the workspace root; set `PYTHON=.venv/bin/python` for NNC's PyTorch environment.
+the workspace root after `./scripts/setup-python.sh`. NNC runners default to
+the project `.venv` containing PyTorch and editable `edge-nnc`. Set `PYTHON`
+to an explicit prepared interpreter when needed; `UV_PROJECT_ENVIRONMENT`
+selects a different project environment for both setup and the NNC runner.
 
 | Group | Command | Owner and purpose |
 | --- | --- | --- |
@@ -23,7 +26,7 @@ Private RTL tests under `src/test-e3` remain optional and independent.
 Keep model fixtures, PyTorch goldens, Python unit tests and model-discovery
 logic in `src/edge-nnc`. Add a new compiler/operator regression there, not in
 this repository's `example/` directory. `tests/nnc/run.sh` calls that package's
-unit discovery and `nnc/run_harness.py` through `scripts/run-nnc.sh`; it has no
+unit discovery and `src/edge-nnc/nnc/run_harness.py` through `scripts/run-nnc.sh`; it has no
 local model list or tolerance overrides. Both phases run even if one fails.
 Extra arguments to `tests/run.sh nnc` are passed to NNC's model harness.
 `tests/nnc/packed.sh` supplies the workspace build and simulator adapter for

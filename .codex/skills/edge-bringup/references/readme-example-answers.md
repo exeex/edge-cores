@@ -56,6 +56,6 @@ implement the affected layers, then run compiler and RTL regressions.
 For RTL features, start in public `src/edge-e3`, `src/edge-asic` or
 `src/edge-32`, depending on ownership. For compiler/runtime changes, work in
 `src/edge-nnc` through the `nnc` and `cpp/libnn` compatibility paths. Select
-public examples and NNC tests from `software-harness` and `llama-nnc`.
+public examples and NNC tests from `software-harness` and `edge-nnc`.
 Private test repositories such as `src/test-e3` remain optional and should not
 be copied into the public workspace.

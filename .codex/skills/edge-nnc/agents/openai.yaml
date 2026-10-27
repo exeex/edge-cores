@@ -1,0 +1,4 @@
+interface:
+  display_name: "NNC Models and Compiler"
+  short_description: "Compose, compile, validate and profile NNC models"
+  default_prompt: "Use $edge-nnc to compose a PyTorch model with NNC modules, compile it with nnc.compile(), and validate it on public E3 RTL."

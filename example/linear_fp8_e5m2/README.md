@@ -33,8 +33,10 @@ m = Model().eval()
 nnc.compile(m, make_example_args(), out_dir=Path(__file__).parent, save_reference=True)
 ```
 
-The repository is used in place, so module invocation makes the local `nnc`
-package importable. This is the explicit regeneration step and requires PyTorch.
+Run `./scripts/setup-python.sh` first to install PyTorch and editable NNC
+into `.venv`. Module invocation from the workspace root locates this example;
+`import nnc` resolves through the editable install in that environment.
+This is the explicit regeneration step and requires PyTorch.
 `run.sh` builds and runs the saved headers and binaries, comparing every output
 with the saved `expected.bin`; it does not import PyTorch, re-export the model,
 or requantize weights.

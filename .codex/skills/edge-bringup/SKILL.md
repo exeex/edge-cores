@@ -83,7 +83,8 @@ E3, Edge32 and shared ASIC RTL are public. Private repositories mainly contain
 internal tests such as `src/test-e3`; the public build does not require them.
 
 `scripts/setup-python.sh` selects one mutually exclusive PyTorch extra from
-`pyproject.toml` and runs `uv sync`:
+`pyproject.toml` and runs `uv sync`. It creates a Python 3.12 `.venv` containing
+PyTorch and an editable `edge-nnc` installation from `src/edge-nnc`:
 
 - If `nvidia-smi` is absent, cannot query a GPU, or cannot report a supported
   CUDA driver level, select `cpu`.
@@ -91,6 +92,18 @@ internal tests such as `src/test-e3`; the public build does not require them.
   `cu130` for 13.0–13.1, and `cu132` for 13.2 or newer.
 - After installation, require the CPU build to report no CUDA runtime, or the
   selected CUDA build to pass `torch.cuda.is_available()` and name its GPU.
+- Require `nnc.__file__` and editable distribution metadata to point at this
+  checkout's `src/edge-nnc`; do not recreate the removed root symlink.
+
+Use `.venv/bin/python` explicitly or `source .venv/bin/activate` before Python
+demos. NNC shell runners use the project environment by default. To keep a
+separate environment, set `UV_PROJECT_ENVIRONMENT=/absolute/path/to/venv`
+for setup and subsequent runner commands. `PYTHON=/absolute/path/bin/python`
+overrides a runner's interpreter but does not prepare that environment.
+Verify `import torch, nnc` with the selected interpreter; they must be in the
+same environment. Avoid installing into system Python or an unrelated active
+virtualenv. Editable source changes need no reinstall; rerun setup when
+package metadata/dependencies change.
 
 For deterministic diagnosis or CI, override auto-detection explicitly:
 
@@ -115,7 +128,7 @@ long build. Then use the maintained specialist skill:
 - RTL smoke or public simulator: `edge-verilator-demo` and `software-harness`.
 - Edge versus C906 benchmark: `edge-tensor-example` CoreMark comparison flow.
 - PyTorch module composition, `nnc.compile()`, quantized Linear examples and
-  supported model smoke: `llama-nnc` and `software-harness`.
+  supported model smoke: `edge-nnc` and `software-harness`.
 - Tensor or NNC feature implementation requiring editable RTL: explain the
   owning public RTL modules and validate through public examples; keep internal
   test repositories optional.
@@ -141,7 +154,7 @@ PYTHON=.venv/bin/python ./example/tensor/run.sh
 For Python/NNC work, additionally run:
 
 ```sh
-.venv/bin/python -m unittest nnc.test_compiler
+PYTHON=.venv/bin/python ./tests/run.sh nnc-unit
 PYTHON=.venv/bin/python ./example/llama/run.sh
 ```
 
