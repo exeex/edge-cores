@@ -121,6 +121,13 @@ own source-available hardware license. See [licensing](LICENSING.md).
 
 ![edge-32 control core integrated with the edge-e3 accelerator and shared SRAM](docs/images/edge-32-e3-architecture.svg)
 
+The [interactive architecture renderer](docs/architecture-renderer/README.md)
+shows the four-stage RV32 pipeline alongside independent ASIC hardware threads,
+including captured GPR parameters and `start` / `sync` fork/join behavior.
+The [minimal ACTU fork/join example](example/fork_join/README.md) provides a
+self-checking program and a measured Verilator trace for scalar/ASIC overlap
+and EX-owned sync waiting. Run it with `./example/fork_join/run.sh`.
+
 ## From the E3 MVP to Larger NPU Systems
 
 - **E3 is the minimum viable core:** an 8×8 Tensor array and 128 KiB SRAM,

@@ -87,6 +87,8 @@ module edge_soc_demo_tb;
         $fdisplay(report_fd, "TEST FAIL");
         $fdisplay(report_fd, "REASON=%0s", reason);
       end
+      if (passed && check_tensor_output_enable != 0)
+        $fdisplay(report_fd, "TENSOR_OUTPUT_CHECK=PASS");
       $fdisplay(report_fd, "RETURN_VALUE=%0d", core_csr_break_code);
       $fdisplay(report_fd, "CYCLE=%0d", cycle);
 `ifdef EDGE_PRIVATE_TENSOR_METRICS
@@ -197,6 +199,8 @@ module edge_soc_demo_tb;
     .core_csr_putchar_valid(core_csr_putchar_valid),
     .core_csr_putchar_char(core_csr_putchar_char)
   );
+
+  `include "src/soc/logical/tb/edge_soc_arch_trace.svh"
 
   always #5 clk = ~clk;
 
