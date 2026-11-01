@@ -119,11 +119,13 @@ own source-available hardware license. See [licensing](LICENSING.md).
   bare-metal C++ operator runtime. It lowers graphs, plans tensor storage,
   packs static weights and generates code for execution on E3.
 
-![edge-32 control core integrated with the edge-e3 accelerator and shared SRAM](docs/images/edge-32-e3-architecture.svg)
+[![Edge E3: four-stage RV32 pipeline, parallel ASIC engines and shared SRAM](https://exeex.github.io/edge-e3-architecture/exports/edge-e3-overview.png)](https://exeex.github.io/edge-e3-architecture/#workbench)
 
-The [interactive architecture atlas](https://exeex.github.io/edge-e3-architecture/)
-shows the four-stage RV32 pipeline alongside independent ASIC hardware threads,
-including captured GPR parameters and `start` / `sync` fork/join behavior.
+**[Open the interactive architecture atlas →](https://exeex.github.io/edge-e3-architecture/)**
+
+Explore the system datapath, Tensor and ACTU modes, measured traces and SRAM
+rotation. Click the diagram to open the interactive system view.
+
 The [minimal ACTU fork/join example](example/fork_join/README.md) provides a
 self-checking program and a measured Verilator trace for scalar/ASIC overlap
 and EX-owned sync waiting. Run it with `./example/fork_join/run.sh`.
