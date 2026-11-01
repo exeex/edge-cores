@@ -17,3 +17,6 @@
 [submodule "src/edge-nnc"]
 	path = src/edge-nnc
 	url = https://github.com/exeex/edge-nnc.git
+[submodule "docs/architecture-renderer"]
+	path = docs/architecture-renderer
+	url = https://github.com/exeex/edge-e3-architecture.git

@@ -121,12 +121,17 @@ own source-available hardware license. See [licensing](LICENSING.md).
 
 ![edge-32 control core integrated with the edge-e3 accelerator and shared SRAM](docs/images/edge-32-e3-architecture.svg)
 
-The [interactive architecture renderer](docs/architecture-renderer/README.md)
+The [interactive architecture atlas](https://exeex.github.io/edge-e3-architecture/)
 shows the four-stage RV32 pipeline alongside independent ASIC hardware threads,
 including captured GPR parameters and `start` / `sync` fork/join behavior.
 The [minimal ACTU fork/join example](example/fork_join/README.md) provides a
 self-checking program and a measured Verilator trace for scalar/ASIC overlap
 and EX-owned sync waiting. Run it with `./example/fork_join/run.sh`.
+
+The atlas is maintained in [exeex/edge-e3-architecture](https://github.com/exeex/edge-e3-architecture)
+and mounted here as the `docs/architecture-renderer` submodule. Initialize it
+with `git submodule update --init docs/architecture-renderer`; pushes to the
+atlas repository’s `main` branch publish it through GitHub Pages.
 
 ## From the E3 MVP to Larger NPU Systems
 
