@@ -119,6 +119,12 @@ own source-available hardware license. See [licensing](LICENSING.md).
   bare-metal C++ operator runtime. It lowers graphs, plans tensor storage,
   packs static weights and generates code for execution on E3.
 
+### System overview
+
+![edge-32 control core integrated with the edge-e3 accelerator and shared SRAM](docs/images/edge-32-e3-architecture.svg)
+
+### Pipeline and hardware threads
+
 [![Edge E3: four-stage RV32 pipeline, parallel ASIC engines and shared SRAM](https://exeex.github.io/edge-e3-architecture/exports/edge-e3-overview.png)](https://exeex.github.io/edge-e3-architecture/#workbench)
 
 **[Open the interactive architecture atlas →](https://exeex.github.io/edge-e3-architecture/)**
