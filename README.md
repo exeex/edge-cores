@@ -42,7 +42,7 @@ For runnable models, saved artifacts and simulator runners, see the examples:
 | Quantized Linear | Composed models |
 | --- | --- |
 | [MXFP4](example/linear_mxfp4/README.md) · [NVFP4](example/linear_nvfp4/README.md) | [Llama 3 transformer block](example/llama/README.md) |
-| [FP4](example/linear_fp4/README.md) · [Q8_0](example/linear_q8_0/README.md) | [Reduced Qwen 3.6 layer](src/edge-nnc/nnc/test/qwen36_coverage.md) |
+| [FP4](example/linear_fp4/README.md) · [Q8_0](example/linear_q8_0/README.md) | [Reduced Qwen 3.6 layer](https://github.com/exeex/edge-nnc/blob/645cc3793c1b7a309314a5e5adb3bdce9cf7556a/nnc/test/qwen36_coverage.md) |
 | [FP8 E4M3FN](example/linear_fp8_e4m3fn/README.md) · [FP8 E5M2](example/linear_fp8_e5m2/README.md) | |
 
 ## Performance Snapshot
@@ -63,7 +63,7 @@ Ideal work takes 8,192 cycles on the 8×8 Tensor array (64 MACs/cycle).
 
 Includes weight DMA, kernel setup, control and synchronization, with operator
 I/O in SRAM. Excludes model-boundary I/O and KV-cache traffic.
-See the [detailed benchmark report](src/edge-nnc/benchmarks/tensor-64x64-128/README.md)
+See the [detailed benchmark report](https://github.com/exeex/edge-nnc/blob/645cc3793c1b7a309314a5e5adb3bdce9cf7556a/benchmarks/tensor-64x64-128/README.md)
 and [validation record](docs/releases/v0.3.1-validation.md) for measurement
 boundaries, capacity sweeps and reproduction. Earlier direct Tensor/activation
 measurements are in the [v0.3 report](docs/releases/v0.3-performance.md).
@@ -85,8 +85,8 @@ K group is the number of consecutive input-channel weights sharing a scale
 within one output channel. Bits per parameter count weight codes and group
 scales, excluding tail padding and NVFP4's global scalar. This runtime rounds
 that global scale to BF16 and stores it in an FP32 container. See the
-[quant Linear](src/edge-nnc/QUANT_LINEAR.md) and
-[native FP4](src/edge-nnc/MICROSCALE_LINEAR.md) contracts for packing and numerical details.
+[quant Linear](https://github.com/exeex/edge-nnc/blob/645cc3793c1b7a309314a5e5adb3bdce9cf7556a/QUANT_LINEAR.md) and
+[native FP4](https://github.com/exeex/edge-nnc/blob/645cc3793c1b7a309314a5e5adb3bdce9cf7556a/MICROSCALE_LINEAR.md) contracts for packing and numerical details.
 
 ## Setup
 
@@ -98,7 +98,7 @@ ask: **Use `$edge-bringup` to set up this machine.**
 ## Build on Edge
 
 [Integrate your accelerator](.codex/skills/integrate-your-design/SKILL.md) ·
-[Intrinsic manual](src/edge-e3/include/README.md) ·
+[Intrinsic manual](https://github.com/exeex/edge-e3/blob/60be69f0bd06b9953d96ced7057e8ec08cb3a2ac/include/README.md) ·
 [Public regressions](tests/README.md) · [Synthesis](synth/README.md) ·
 [Contributing](CONTRIBUTING.md) · [Research citation](references.bib)
 
@@ -107,15 +107,15 @@ own source-available hardware license. See [licensing](LICENSING.md).
 
 ## Current Project Architecture
 
-- **[edge-32](src/edge-32/README.md)**: RV32 control processor, including the
+- **[edge-32](https://github.com/exeex/edge-32/blob/55a089b372e2a18f8fa99185db7db264ad72602d/README.md)**: RV32 control processor, including the
   scalar pipeline, FPU, caches, bus interface and accelerator instruction path.
-- **[edge-asic](src/edge-asic/README.md)**: Shared accelerator building blocks,
+- **[edge-asic](https://github.com/exeex/edge-asic/blob/3390ec73ac28041c4039572674ce42ee11ddbaed/README.md)**: Shared accelerator building blocks,
   including arithmetic primitives, ACTU/CMPU and DMA/stream plumbing, reused
   across Edge products.
-- **[edge-e3](src/edge-e3/README.md)**: Reference NPU integrating the edge-32
+- **[edge-e3](https://github.com/exeex/edge-e3/blob/60be69f0bd06b9953d96ced7057e8ec08cb3a2ac/README.md)**: Reference NPU integrating the edge-32
   RV32 control core with edge-asic building blocks. E3 supplies the product
   topology, scheduling, 8×8 Tensor unit, DMA/DTCM integration and software SDK.
-- **[edge-nnc](src/edge-nnc/README.md)**: PyTorch model compiler and matched
+- **[edge-nnc](https://github.com/exeex/edge-nnc/blob/645cc3793c1b7a309314a5e5adb3bdce9cf7556a/README.md)**: PyTorch model compiler and matched
   bare-metal C++ operator runtime. It lowers graphs, plans tensor storage,
   packs static weights and generates code for execution on E3.
 
@@ -147,7 +147,7 @@ atlas repository’s `main` branch publish it through GitHub Pages.
   providing a runnable platform for validating the control core, DMA, compiler
   and operator kernels.
 - **Target 64-token prefill chunks or larger.** NNC's design and the
-  [token-capacity benchmarks](src/edge-nnc/benchmarks/tensor-64x64-128/README.md#token-capacity-sweep-same-operators)
+  [token-capacity benchmarks](https://github.com/exeex/edge-nnc/blob/645cc3793c1b7a309314a5e5adb3bdce9cf7556a/benchmarks/tensor-64x64-128/README.md#token-capacity-sweep-same-operators)
   motivate processing enough tokens together to amortize weight DMA and
   control overhead; the measured 64/128-token capacities are more efficient
   than 32-token capacity on the tested workload.
