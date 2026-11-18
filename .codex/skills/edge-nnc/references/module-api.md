@@ -29,12 +29,14 @@ other supported PyTorch/NNC modules inside a normal `nn.Module`.
 | `nnc.LinearFp8E5M2` | E5M2 | 32 | BF16 |
 
 Quantized modules copy frozen BF16 inference parameters from the source layer;
-NNC quantizes static weights at compile time. Public activations and output
-are contiguous BF16. K must be a positive multiple of the group size and N
+NNC quantizes static weights at compile time. Logical activations and outputs
+are BF16, but external payloads may use compiler-planned tiled storage rather
+than logical contiguous order. Follow `io_layout.json` for physical I/O. K must
+be a positive multiple of the group size and N
 a positive multiple of 8. Optional bias is a separate BF16 add.
 
-The same public API compiles composed graphs. Read the root README for a
-two-layer quantized MLP, and `example/llama/model.py` for the reduced Llama
+The same public API compiles composed graphs. Read the [root README](../../../../README.md)
+for a two-layer quantized MLP, and [Llama model](../../../../example/llama/model.py) for the reduced Llama
 graph using `nnc.Linear`, `RMSNorm`, `RoPE`, `KVCacheUpdate` and `Attention`.
 Do not equate compiling this graph with importing a full pretrained checkpoint.
 
@@ -54,11 +56,28 @@ model, example_args = make_model_and_args()
 nnc.compile(model.eval(), example_args, out_dir="build/nnc-model", save_reference=True)
 ```
 
-The outputs are `forward.hpp`, `init.hpp`, `input.bin`, `weight.bin` and,
-with `save_reference=True`, the quantized reference `expected.bin`.
+The outputs are `forward.hpp`, `init.hpp`, `input.bin`, `weight.bin` and
+`io_layout.json`, plus `expected.bin` with `save_reference=True`.
+`nnc.compile` returns the output directory as a `Path`. It evaluates the
+provided model for the saved reference, converts the result to BF16 and writes
+it in the planned physical output order. For quantized wrappers that reference
+uses their quantized operator semantics, not the original full-precision layer.
 The saved-reference API currently accepts one Tensor output, or a singleton
 tuple containing one Tensor. It does not build an ELF or run RTL itself;
 the workspace runner performs those steps.
+
+The public [compile API](../../../../src/edge-nnc/nnc/__init__.py) also accepts
+`quant_token_capacity=None` and `matmul_token_capacity=None`; supplied values
+must be positive and select runtime template capacities for applicable calls.
+They do not establish support for arbitrary shapes or SRAM footprints. Check
+the [code generator](../../../../src/edge-nnc/nnc/codegen.py), matched runtime
+and relevant composed tests before choosing new values. Omit them to keep the
+current default behavior.
+
+`io_layout.json` records logical shapes, per-input/output layouts and lane
+count. The [compiler](../../../../src/edge-nnc/nnc/compiler.py) reorders tiled
+inputs and saved outputs consistently. Preserve logical values when decoding
+or migrating payloads; changing metadata alone does not convert old binaries.
 
 ```sh
 ./scripts/run-nnc.sh smoke \
@@ -76,7 +95,8 @@ The six workspace `example/linear_*` runners replay their saved artifacts.
 Regenerate a specific example explicitly with
 `.venv/bin/python -m example.linear_mxfp4.model` (substitute the spec and use
 the selected environment's interpreter if it differs from `.venv`).
-Preserve the two headers and three binaries together. Check both regenerated
+Preserve both headers, all payload/reference binaries and `io_layout.json`
+together with the compiler/runtime revision. Check both regenerated
 execution and saved replay when a quantization or scale encoding changes.
 
 For source-model tests use `scripts/run-nnc.sh smoke --model-file <file.py>`;
@@ -86,6 +106,16 @@ fixtures; workspace examples link to them and own saved artifact sets/runners.
 `tests/run.sh nnc` discovers the source fixtures; `tests/run.sh examples`
 independently checks saved examples.
 
+The [smoke runner](../../../../src/edge-nnc/nnc/run_smoke.py) checks headers and
+input/weight binaries when replaying, and requires `expected.bin` for execution.
+It currently does not require `io_layout.json` in that file-presence check;
+successful preflight alone therefore does not prove artifact layout provenance
+or compatibility. Retain the metadata even when the runner would accept its
+absence. `--build-only` compiles an ELF without RTL execution or numerical
+validation. For an executed replay require simulator `TEST PASS` and numerical
+`COMPARE PASS`; its default absolute tolerance is `0.05`, so use the explicit
+zero tolerance above for the unbiased native fixture.
+
 ## API and numerical boundaries
 
 - Transformer wrappers retain the reduced ops' current behavior:
@@ -93,15 +123,20 @@ independently checks saved examples.
   unmasked. These wrappers do not establish stateful decoding-cache support.
 - Quantized Linear constructors accept ordinary `torch.nn.Linear` and select built-in presets.
   A constructor accepting an already user-quantized Linear is not implemented.
-- User-defined quantization strategies are planned, constrained by supported
-  op encodings, shapes and packing contracts. Function-form ops already
+- User-defined quantization strategies are not exposed as a general wrapper
+  constructor API. Function-form ops already
   accept explicit static codes/scales for supported formats; this is not a
   complete generic quantized Linear construction API.
 - MXFP4 and NVFP4 are weight-only flows. NVFP4's global scalar is RNE-rounded
   to BF16 in an FP32 container; no full-FP32 global precision claim.
 - Q8_0 retains native FP16 scale bits and INT8 codes in E3 tile order; there
   is no GGUF importer or llama.cpp GEMM bit-identity guarantee.
-- Consult `src/edge-nnc/MICROSCALE_LINEAR.md` and `QUANT_LINEAR.md` before
+- Consult [MICROSCALE_LINEAR.md](../../../../src/edge-nnc/MICROSCALE_LINEAR.md)
+  and [QUANT_LINEAR.md](../../../../src/edge-nnc/QUANT_LINEAR.md) before
   changing scales, packing or numerical reference behavior. Use zero
   tolerance for the unbiased native examples and BF22 precision fixtures;
   retain documented tolerances for biased/composed models.
+- For custom scalar producers/consumers follow
+  [MEMORY_OWNERSHIP.md](../../../../src/edge-nnc/MEMORY_OWNERSHIP.md): publish
+  CPU-written DRAM payloads before DMA and acquire completed outputs before
+  scalar reads. Layout correctness and cache visibility are separate contracts.
