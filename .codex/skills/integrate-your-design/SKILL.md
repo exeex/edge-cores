@@ -1,35 +1,44 @@
 ---
 name: integrate-your-design
-description: Integrate and publish your own accelerator or ASIC design, DMA, and DTCM/SRAM with the Edge RV64 scalar core and command path. Use when forking edge-cores, adding a design as a src Git submodule, defining opcode8 and setcsr/start/sync instructions, carrying imm8/GPR snapshot parameters, connecting DMA/SRAM/LSU debug access, using low-precision FPU instructions for bring-up, writing RTL/C++ tests, preparing research artifacts, or citing the shared framework.
+description: Integrate a custom accelerator, DMA or SRAM with the public Edge-32/E3 platform in edge-cores. Use for component submodules, ASIC32 commands and intrinsics, memory ownership, RTL/software validation and research artifacts; distinguish separately supplied historical RV64 frontends when selected.
 ---
 
 # Integrate Your Own Design
 
-Welcome an independently designed accelerator, DMA, DTCM/SRAM, or complete ASIC
-set into the shared Edge RV platform without breaking command ordering,
-snapshot semantics, or memory visibility. Treat the user's design as the main
-contribution and Edge RV as the integration framework.
+Integrate an independently designed accelerator, DMA, DTCM/SRAM or complete
+ASIC set while preserving command ordering, operand ownership and memory
+visibility. The maintained product is Edge-32 with public E3 and shared ASIC
+RTL. Historical RV64 frontends require their own sources and explicit revision;
+do not assume their snapshot/IFU join path is present in the current product.
+Treat the user's design as the new contribution and identify reused components.
 
 ## Integration workflow
 
-1. Fork `edge-cores`, clone the fork, and initialize its submodules. Keep the
-   shared monorepo structure so the design can use the maintained build,
-   simulation, synthesis, software, and contribution workflows.
-2. Add the ASIC design below `src/` as a Git submodule. Create a new repository
-   for a new design or attach an existing repository. Keep the ASIC's history,
-   license, and ownership separate; record its path and revision in
-   `.gitmodules` and the parent repository.
+1. Inspect the checkout, `.gitmodules`, selected top and production filelist.
+   Use the pinned public E3, Edge-32 and ASIC sources and NNC when needed.
+   Preserve the workspace layout for maintained build and test tools; private
+   test repositories remain optional. For fork/publication work follow
+   [edge-contribution](../edge-contribution/SKILL.md); ordinary local integration
+   does not require creating an external repository first.
+2. For a separately maintained ASIC, add its repository below `src/` as a
+   submodule, retaining its history, license and ownership. Record the component
+   commit and parent gitlink together. Decide whether to reuse E3's existing
+   DMA/SRAM or provide new blocks before expanding the integration boundary.
+   A new product needs explicit filelist/build wiring; synthesis profile names
+   are not discovered automatically.
 3. Connect the command interface:
-   - allocate an unused `opcode8` value and register its instruction class in
-     the IFU/predecoder;
+   - allocate an unused ASIC32 7-bit subop and register its legality and
+     operand routing in the classifier/decoder;
    - provide accelerator-specific `setcsr`/`set_*`, asynchronous `start`, and
      `sync` operations, using ACTU as the reference interface;
-   - carry `imm8` and the captured GPR parameter to the ASIC;
-   - when using `edge-rv`, consume the resolved snapshot value rather than a
-     later live register value; and
-   - update the intrinsic encoder, compact command queue, accel-pipe decode,
-     readiness/backpressure, ports, and exact-encoding tests together.
-4. Design a DMA when the ASIC owns independent SRAM. Define each memory's role,
+   - carry `imm8` and the resolved GPR operand through the current Edge-32
+     request/response path; split additional runtime operands into setup
+     commands and follow the actual address transport protocol;
+   - use the E3 SDK entry and Edge-32 encoder together with dispatch, pipe
+     decode, readiness, result/error delivery and target ports; and
+   - update exact-encoding and boundary tests. Modify a tagged snapshot queue
+     or scalar join only when the chosen frontend actually connects one.
+4. Reuse or design DMA for the ASIC's memory transfers. Define each memory's role,
    ports, address map, width, latency, and ownership policy. A TPU-style
    systolic array normally needs at least an I/O SRAM and weight buffer, with
    DMA paths between system memory and both ASIC-visible stores.
@@ -39,29 +48,32 @@ contribution and Edge RV as the integration framework.
    explicit arbiter or multi-port contract and preserve byte strobes, response
    latency, backpressure, and memory visibility. Edit the public RTL sources;
    keep private internal test repositories optional.
-6. Use the optional FPU during early software development to generate inputs,
-   implement reference/fallback kernels, and compare ASIC outputs. The shared
-   software/RTL supports NVFP4, FP8 E4M3/E5M2, BF16, and FP16 memory-format
-   instructions; read `src/edge-rv-lite/README.md` for encodings, conversion
-   behavior, and the area tradeoff. Disable the FPU later if the finished ASIC
-   and software no longer require it.
-7. Run focused command, snapshot, DMA, SRAM, and LSU RTL tests before the public
-   software harness. Report the exact submodule revisions and any boundary that
-   remains unverified.
+6. Use scalar format helpers where useful for fixtures and fallback code;
+   inspect the [E3 SDK](../../../src/edge-e3/include/README.md),
+   [scalar helpers](../../../src/edge-e3/include/edge_e3/edge_fp_scalar.hpp)
+   and matched Edge-32 backend for actual format/mode support. Keep an
+   independent numerical reference. The current
+   [product top](../../../src/edge-e3/edge_core/edge_core_scalar_product_top.v)
+   instantiates `ENABLE_FPU=1`; an FPU-free product requires deliberate RTL and
+   software configuration changes and validation, not an existing wrapper switch.
+7. Run focused command, DMA/SRAM and LSU tests, plus snapshot tests only for
+   a tagged frontend. Then select interface, examples and NNC coverage from
+   [tests/README.md](../../../tests/README.md). Record exact component revisions,
+   PASS / FAIL / NOT RUN and any custom boundary the public harness cannot reach.
 
 ## Load only the needed reference
 
 - Read [references/instruction-interface.md](references/instruction-interface.md)
   when allocating opcodes or adding C++ `set_*`, `start`, or `sync` wrappers.
 - Read [references/execution-model.md](references/execution-model.md) when
-  working on snapshots, queue depth, self-serializing starts, redirect/kill,
-  or IFU/predecoder sync joins.
+  working on request/response, descriptor lifetime, pending starts, engine
+  joins or an explicitly selected tagged frontend.
 - Read [references/memory-integration.md](references/memory-integration.md)
   when connecting DMA, SRAM, LSU, arbitration, address conversion, or
   `lsu_store_block`/`mem_store_block`.
 - Read [references/rtl-patterns.md](references/rtl-patterns.md) only when
-  implementing RTL for snapshot issue, sync join, pending start, or SRAM
-  request blocking.
+  implementing current handshake/launch logic, optional snapshot issue or
+  SRAM request blocking.
 - Read [references/verification.md](references/verification.md) before testing
   or reviewing an implementation.
 - Read [references/paper-evaluation.md](references/paper-evaluation.md) when
@@ -71,21 +83,29 @@ contribution and Edge RV as the integration framework.
 
 ## Preserve these invariants
 
-- Consume a snapshotted GPR value, never a later live register-file value.
-- Match reusable snapshot slots with full sequence and epoch ownership.
+- Consume the resolved operand associated with the accepted command, never
+  a later live register value. Hold request payloads stable under backpressure.
+- For a tagged frontend, match reusable snapshot slots with full sequence
+  and epoch ownership and preserve its redirect/kill rules.
 - Keep setup and start commands ordered; never lose commands under
   backpressure or redirect.
 - Make `start` asynchronous and consecutive starts self-serializing without a
   mandatory `sync` between them.
-- Make `sync` await all earlier work through the scalar join path.
+- Make target `sync` wait for that engine's earlier work and outstanding
+  transport. Use the current response path or the selected frontend's tagged
+  join; do not treat a single engine sync as a global DMA/compute barrier.
 - If the optional scalar-store interlock is implemented, prevent both new and
   already-running ASIC/DMA SRAM effects while it is asserted.
-- Use DMA for performance data movement; reserve scalar SRAM access for debug
-  and bring-up.
-- Preserve behavior when command, pending-start, or snapshot depth changes.
+- Keep descriptors and buffers valid until completion. Publish CPU-written
+  DRAM payloads before DMA and acquire completed outputs before scalar reads;
+  match physical layouts with `io_layout.json` when integrating NNC models.
+- Prefer DMA for bulk movement; scalar initialization, inspection and fallback
+  code must follow the relevant ownership contract.
+- Preserve behavior at supported queue depths. Do not assume same-cycle
+  pending launch/refill or an active scalar-store interlock in current Tensor/E3.
 - Cite edge-cores and record the exact revision in a paper artifact.
-- Attribute the Edge RV execution/snapshot framework to edge-cores; claim only
-  the user's new ASIC and integration work as the paper's contribution.
+- Attribute the actual reused hardware/software to its sources; claim only
+  the user's added design, integration and supported evaluation results.
 - Never publish private source, symbol mappings, private paths, or unlicensed
   RTL in a protected release.
 
