@@ -1,0 +1,58 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Edge32: Hello world (JTAG)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/jtag-hello/hello.elf",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/opt/homebrew/bin/riscv64-elf-gdb",
+      "preLaunchTask": "Edge32: prepare debug",
+      "setupCommands": [
+        {
+          "text": "set remotetimeout 20"
+        },
+        {
+          "text": "set breakpoint always-inserted on"
+        }
+      ],
+      "customLaunchSetupCommands": [
+        {
+          "text": "file \"${workspaceFolder}/build/jtag-hello/hello.elf\"",
+          "ignoreFailures": false
+        },
+        {
+          "text": "set architecture riscv:rv32",
+          "ignoreFailures": false
+        },
+        {
+          "text": "target remote 127.0.0.1:3333",
+          "ignoreFailures": false
+        },
+        {
+          "text": "monitor halt",
+          "ignoreFailures": false
+        },
+        {
+          "text": "load",
+          "ignoreFailures": false
+        },
+        {
+          "text": "set $pc = _start",
+          "ignoreFailures": false
+        },
+        {
+          "text": "tbreak main",
+          "ignoreFailures": false
+        }
+      ],
+      "launchCompleteCommand": "exec-continue",
+      "externalConsole": false,
+      "miDebuggerServerAddress": "127.0.0.1:3333",
+      "targetArchitecture": "x86",
+      "postDebugTask": "Edge32: stop debug services"
+    }
+  ]
+}

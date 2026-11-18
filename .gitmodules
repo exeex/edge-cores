@@ -20,3 +20,6 @@
 [submodule "docs/architecture-renderer"]
 	path = docs/architecture-renderer
 	url = https://github.com/exeex/edge-e3-architecture.git
+[submodule "src/test-32"]
+	path = src/test-32
+	url = git@github.com:exeex/test-32.git

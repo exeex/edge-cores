@@ -6,6 +6,14 @@ Compile PyTorch models to bare-metal C++ and run them on edge-e3 RTL using
 standard LLVM and Verilator. Build on the open-source **edge-32** control
 processor and the source-available **edge-e3** reference NPU.
 
+## Preparing v0.4
+
+ASAP7 1 GHz integer-core timing and JTAG debugging are described in the
+[v0.4 draft release notes](docs/releases/v0.4.md). The optional
+[JTAG hello-world example](examples/jtag-hello/README.md) demonstrates VS Code,
+GDB and OpenOCD against a locally rebuilt debug simulator; it currently requires
+private test support and prepared debug RTL views.
+
 ## New in v0.3 and v0.3.1
 
 **MXFP4 · NVFP4 · FP8 E4M3FN / E5M2 · FP4 · Q8_0**

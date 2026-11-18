@@ -1,0 +1,65 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Edge32: build hello",
+      "type": "process",
+      "command": "python3",
+      "args": [
+        "${workspaceFolder}/examples/jtag-hello/debug.py",
+        "build"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Edge32: JTAG server + console",
+      "type": "process",
+      "command": "python3",
+      "args": [
+        "${workspaceFolder}/examples/jtag-hello/debug.py",
+        "serve"
+      ],
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "edge-jtag",
+        "pattern": {
+          "regexp": "^(EDGE_TASK_ERROR): (.*)$",
+          "file": 1,
+          "message": 2,
+          "kind": "file"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^EDGE_JTAG_STARTING$",
+          "endsPattern": "^EDGE_JTAG_READY$"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "runOptions": {
+        "instanceLimit": 1
+      }
+    },
+    {
+      "label": "Edge32: prepare debug",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Edge32: build hello",
+        "Edge32: JTAG server + console"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Edge32: stop debug services",
+      "type": "process",
+      "command": "python3",
+      "args": [
+        "${workspaceFolder}/examples/jtag-hello/debug.py",
+        "stop"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}
