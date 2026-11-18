@@ -35,14 +35,14 @@ def until(predicate):
 try:
  send('initialize',{'adapterID':'cppdbg','linesStartAt1':True,'columnsStartAt1':True,'pathFormat':'path'})
  until(lambda m:m.get('command')=='initialize')
- cfg=json.loads((root/'examples/jtag-hello/launch.json').read_text())['configurations'][0]
+ cfg=json.loads((root/'example/jtag-hello/launch.json').read_text())['configurations'][0]
  cfg=json.loads(json.dumps(cfg).replace('${workspaceFolder}',str(root)))
  cfg.pop('preLaunchTask')
  cfg.pop('postDebugTask',None)
  cfg['miDebuggerPath']=os.environ.get('GDB') or shutil.which('riscv64-elf-gdb') or shutil.which('gdb-multiarch') or cfg['miDebuggerPath']
  send('launch',cfg)
  until(lambda m:m.get('event')=='initialized')
- send('setBreakpoints',{'source':{'path':str(root/'examples/jtag-hello/main.c')},'breakpoints':[{'line':11}]})
+ send('setBreakpoints',{'source':{'path':str(root/'example/jtag-hello/main.c')},'breakpoints':[{'line':11}]})
  until(lambda m:m.get('command')=='setBreakpoints')
  send('configurationDone',{})
  stopped=until(lambda m:m.get('event')=='stopped')
@@ -63,7 +63,7 @@ try:
  assert len(result['body']['instructions'])==4,result
  send('next',{'threadId':tid})
  until(lambda m:m.get('event')=='stopped')
- send('setBreakpoints',{'source':{'path':str(root/'examples/jtag-hello/main.c')},'breakpoints':[]})
+ send('setBreakpoints',{'source':{'path':str(root/'example/jtag-hello/main.c')},'breakpoints':[]})
  until(lambda m:m.get('command')=='setBreakpoints')
  send('continue',{'threadId':tid})
  until(lambda m:m.get('event')=='stopped')

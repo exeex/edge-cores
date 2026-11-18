@@ -6,7 +6,7 @@
       "type": "process",
       "command": "python3",
       "args": [
-        "${workspaceFolder}/examples/jtag-hello/debug.py",
+        "${workspaceFolder}/example/jtag-hello/debug.py",
         "build"
       ],
       "problemMatcher": []
@@ -16,7 +16,7 @@
       "type": "process",
       "command": "python3",
       "args": [
-        "${workspaceFolder}/examples/jtag-hello/debug.py",
+        "${workspaceFolder}/example/jtag-hello/debug.py",
         "serve"
       ],
       "isBackground": true,
@@ -56,7 +56,7 @@
       "type": "process",
       "command": "python3",
       "args": [
-        "${workspaceFolder}/examples/jtag-hello/debug.py",
+        "${workspaceFolder}/example/jtag-hello/debug.py",
         "stop"
       ],
       "problemMatcher": []

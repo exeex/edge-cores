@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
-exec python3 examples/jtag-hello/test.py "$@"
+exec python3 example/jtag-hello/test.py "$@"

@@ -7,6 +7,10 @@ console FIFO. The simulator has no program-image preload.
 
 ## Prepare the simulator
 
+This example now lives under `example/`, matching the other public examples.
+When updating from an earlier checkout using `examples/`, remove the generated `build/jtag-hello/sim/` directory
+before rebuilding and refresh your copied `.vscode/tasks.json`.
+
 Install Verilator, LLVM clang/LLD with RISC-V support, Python 3, OpenOCD with
 RISC-V and remote_bitbang support, RISC-V GDB, and the VS Code Microsoft C/C++
 extension. `CLANG` overrides the compiler. The supplied launch configuration
@@ -16,7 +20,7 @@ Only the public Edge32 submodule is needed:
 
 ```sh
 git submodule update --init src/edge-32
-python3 examples/jtag-hello/debug.py build
+python3 example/jtag-hello/debug.py build
 ```
 
 `build` compiles a fresh local Verilator simulator from `src/edge-32`, enables
@@ -40,7 +44,7 @@ the simulator and ELF, start OpenOCD and the console, and stop at `main()`.
 - Continue to print `Hello world from Edge32!` in the JTAG server task terminal.
   Completion stops at `hello_done`'s EBREAK; the final count is **25**.
 - Shift+F5 disconnects GDB and runs the cleanup task. The next F5 starts fresh.
-- Manual cleanup: `python3 examples/jtag-hello/debug.py stop`.
+- Manual cleanup: `python3 example/jtag-hello/debug.py stop`.
 
 The supervisor owns its simulator, OpenOCD and console processes, waits for them
 on shutdown, and does not kill unrelated processes. It refuses occupied loopback
@@ -56,7 +60,7 @@ Custom launch commands explicitly load the ELF symbols and program bytes.
 ## Repeatable validation
 
 ```sh
-./examples/jtag-hello/run.sh
+./example/jtag-hello/run.sh
 ```
 
 This rebuilds the simulator/ELF, checks pin-level JTAG/DMI, GPR access,
