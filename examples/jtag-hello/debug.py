@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Build the demo, or own a simulator/OpenOCD/console session until Ctrl-C."""
 import os
-import hashlib
-import json
 from pathlib import Path
 import shutil
 import signal
@@ -14,48 +12,14 @@ import time
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 OUT = ROOT / 'build/jtag-hello'
-TESTS = ROOT / 'src/test-32/physical/openroad/legacy/targets/rv32core-debug-readport/tests'
+TESTS = HERE
 SIM = OUT / 'sim/Vjtag_tb'
 CONTROL = OUT / 'control.sock'
 
 
-def import_views(source):
-    """Import prepared RTL only; retain its producer receipt for provenance."""
-    source = Path(source).expanduser().resolve()
-    receipt = json.loads((source / 'artifact.json').read_text())
-    if receipt.get('name') != 'edge32_full_core_debug_rtl':
-        raise RuntimeError('Expected the full-core-debug-mainline RTL producer')
-    dest = OUT / 'views'
-    for item in receipt['outputs'].values():
-        # Producer outputs may include nested wrappers and macro abstracts.
-        old_root = Path(next(v['path'] for v in receipt['outputs'].values()
-                             if Path(v['path']).name == 'full-core.sv')).parent
-        original = source / Path(item['path']).relative_to(old_root)
-        if hashlib.sha256(original.read_bytes()).hexdigest() != item['sha256']:
-            raise RuntimeError('Producer output hash mismatch: ' + str(original))
-    dest.mkdir(parents=True, exist_ok=True)
-    copied = {}
-    for original in sorted(source.rglob('*')):
-        if original.is_file() and (original.suffix in ('.v', '.sv', '.svh', '.json')):
-            relative = original.relative_to(source)
-            target = dest / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            if original != target.resolve():
-                shutil.copy2(original, target)
-            copied[str(relative)] = hashlib.sha256(target.read_bytes()).hexdigest()
-    (OUT / 'views-import.json').write_text(json.dumps({
-        'source': str(source), 'files_sha256': copied,
-        'scope': 'prepared behavioral RTL; no simulator or physical closure imported'
-    }, indent=2) + '\n')
-    print('Imported prepared RTL into ' + str(dest), flush=True)
-
-
 def build():
     OUT.mkdir(parents=True, exist_ok=True)
-    views = Path(os.environ.get('EDGE32_DEBUG_VIEWS', str(OUT / 'views'))).resolve()
-    if not (views / 'full-core.sv').is_file():
-        raise RuntimeError('Set EDGE32_DEBUG_VIEWS to prepared full-core-debug-mainline RTL views; see README.md')
-    subprocess.run([sys.executable, str(HERE / 'build_sim.py'), '--views', str(views),
+    subprocess.run([sys.executable, str(HERE / 'build_sim.py'),
                     '--build-dir', str(OUT / 'sim')], check=True)
     clang = os.environ.get('CLANG') or '/opt/homebrew/opt/llvm/bin/clang'
     if not Path(clang).is_file():
@@ -173,16 +137,14 @@ def wait_log(path, marker, child):
 
 if __name__ == '__main__':
     try:
-        if len(sys.argv) == 3 and sys.argv[1] == 'import-views':
-            import_views(sys.argv[2])
-        elif sys.argv[1:] == ['build']:
+        if sys.argv[1:] == ['build']:
             build()
         elif sys.argv[1:] == ['serve']:
             serve()
         elif sys.argv[1:] == ['stop']:
             stop_services()
         else:
-            raise RuntimeError('Usage: debug.py import-views PATH | build | serve | stop')
+            raise RuntimeError('Usage: debug.py build | serve | stop')
     except KeyboardInterrupt:
         pass
     except (OSError, RuntimeError, subprocess.CalledProcessError) as exc:

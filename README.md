@@ -11,8 +11,7 @@ processor and the source-available **edge-e3** reference NPU.
 ASAP7 1 GHz integer-core timing and JTAG debugging are described in the
 [v0.4 draft release notes](docs/releases/v0.4.md). The optional
 [JTAG hello-world example](examples/jtag-hello/README.md) demonstrates VS Code,
-GDB and OpenOCD against a locally rebuilt debug simulator; it currently requires
-private test support and prepared debug RTL views.
+GDB and OpenOCD against a simulator built directly from public Edge32 RTL.
 
 ## New in v0.3 and v0.3.1
 

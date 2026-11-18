@@ -2,6 +2,8 @@
 """Exercise the real cppdbg -> GDB -> OpenOCD -> JTAG RTL path and cleanup."""
 from pathlib import Path
 import socket
+import os
+import shutil
 import subprocess
 import sys
 import time
@@ -51,8 +53,18 @@ def session(check_debugger):
 
 if __name__ == '__main__':
     subprocess.run(DEBUG + ['build'], cwd=ROOT, check=True)
+    compiler = os.environ.get('CLANG') or shutil.which('clang')
+    if 'CLANG' not in os.environ and Path('/opt/homebrew/opt/llvm/bin/clang').is_file():
+        compiler = '/opt/homebrew/opt/llvm/bin/clang'
+    subprocess.run([compiler, '--target=riscv32-unknown-elf', '-march=rv32im',
+                    '-mabi=ilp32', '-g', '-nostdlib', '-fuse-ld=lld', '-Wl,--no-relax',
+                    '-Wl,-T,' + str(HERE / 'tests/jtag_boot.ld'),
+                    str(HERE / 'tests/jtag_boot.S'), '-o', str(OUT / 'jtag_boot.elf')], check=True)
+    subprocess.run([sys.executable, str(HERE / 'tests/check_transport.py'),
+                    '--sim', str(OUT / 'sim/Vjtag_tb'), '--build-dir', str(OUT)],
+                   cwd=ROOT, check=True, timeout=180)
     session(True)
     subprocess.run(DEBUG + ['stop'], cwd=ROOT, check=True)  # idempotent cleanup
     session(False)
-    (OUT / 'test.report').write_text('JTAG HELLO PASS: DAP, GDB, console, cleanup, restart\n')
+    (OUT / 'test.report').write_text('JTAG HELLO PASS: transport, coherence, reset, DAP, GDB, console, cleanup, restart\n')
     print((OUT / 'test.report').read_text(), end='')

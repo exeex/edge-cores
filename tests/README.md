@@ -104,7 +104,7 @@ layer correct.
 ## Optional JTAG debugger example
 
 `./examples/jtag-hello/run.sh` rebuilds and checks the cppdbg/GDB/OpenOCD/JTAG
-path, console, cleanup and restart. It needs the private test-32 support,
-prepared full-core-debug-mainline RTL views and local debugger tools described
+path, cache coherence, resets, console, cleanup and restart. It needs only
+the public Edge32 RTL and local debugger tools described
 in [jtag-hello](../examples/jtag-hello/README.md). It is not included in the
 public `all` route. FPU debug and APR are outside this test's coverage.

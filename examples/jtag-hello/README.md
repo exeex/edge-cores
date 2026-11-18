@@ -12,35 +12,20 @@ RISC-V and remote_bitbang support, RISC-V GDB, and the VS Code Microsoft C/C++
 extension. `CLANG` overrides the compiler. The supplied launch configuration
 uses `/opt/homebrew/bin/riscv64-elf-gdb`; edit `miDebuggerPath` on other systems.
 
-This optional example currently requires access to the private `src/test-32`
-submodule **and prepared `edge32_full_core_debug_rtl` views from the maintained
-full-core-debug-mainline producer**. A public-only checkout is not sufficient.
-The normal `tests/run.sh all` regression remains independent of these inputs.
-The APR view generator and its input artifacts are owned by the composed
-physical-design workspace; this example does not run APR to produce them.
-
-Initialize the private test submodule, then import the prepared RTL:
+Only the public Edge32 submodule is needed:
 
 ```sh
-git submodule update --init src/test-32
-python3 examples/jtag-hello/debug.py import-views \
-  /path/to/physical-workspace/build/apr-mainline-debug/edge32_full_core_debug_rtl
+git submodule update --init src/edge-32
 python3 examples/jtag-hello/debug.py build
 ```
 
-`import-views` checks the producer output hashes and copies RTL and JSON receipts
-into ignored `build/jtag-hello/views/`. It records source/hash provenance in
-`build/jtag-hello/views-import.json`. Alternatively, set `EDGE32_DEBUG_VIEWS`
-to the prepared directory. Keep the prepared views matched to the Edge32 and
-test-32 revisions; they are an explicit dependency, not generated from the
-public RTL checkout alone. Import refreshed views after changing the producer.
-
-`build` compiles a **new local** Verilator JTAG simulator from those views,
-this checkout's Edge32 RTL and test-32 simulation support, then builds the ELF.
-No n906 simulator executable, gate netlist or routed database is reused.
-The simulation uses the current native req/resp debug interface, synchronous
-core reset bridge, I/D caches and a shared 64 KiB behavioral RAM. FPU operations
-and FPU debug state are outside this example's coverage.
+`build` compiles a fresh local Verilator simulator from `src/edge-32`, enables
+its optional `EDGE32_DEBUG` native interface, and builds the debug ELF.
+The simulation support is versioned in this example: a shared 64 KiB behavioral
+RAM, a remote_bitbang socket server, OpenOCD configuration and a console client.
+There is no private test repository, prepared RTL view, APR database or existing
+simulator dependency. The target advertises RV32IM; FPU operations and FPU debug
+state are excluded. Source hashes are recorded in `build/jtag-hello/sim/inputs.json`.
 
 ## VS Code GUI
 
@@ -74,14 +59,17 @@ Custom launch commands explicitly load the ELF symbols and program bytes.
 ./examples/jtag-hello/run.sh
 ```
 
-This rebuilds the simulator/ELF and exercises the installed cppdbg adapter over
+This rebuilds the simulator/ELF, checks pin-level JTAG/DMI, GPR access,
+cache coherence and target/TAP resets, then exercises the installed cppdbg adapter over
 DAP: launch, stop at main, C source breakpoint, stack trace, Watch, disassembly,
 source step, completion with `characters_written == 25`, and the JTAG greeting.
 It then verifies cleanup, repeated stop, released ports, and a fresh start/stop.
 `CPPDBG_ADAPTER` selects `OpenDebugAD7`; `GDB` overrides the test's debugger.
 Reports: `build/jtag-hello/test.report`, `dap-check.log`, and `session.log`.
 
-Verified on 2026-11-18 against Edge32 `160d678`, test-32 `8065fbe`, Verilator
-5.050, OpenOCD and the installed cppdbg/GDB tools. This tests the actual debug
-adapter protocol; the VS Code GUI and its task orchestration were not driven
-automatically. No APR or physical-board timing claim follows from this test.
+Verified on 2026-11-18 with Verilator 5.050, OpenOCD 0.12.0, GDB 18.1 and
+cppdbg 1.35.6 on macOS ARM64. The actual VS Code GUI was also exercised: launch
+to main, C breakpoint, Step Over/Into, Watch, complete greeting, Stop with
+post-debug cleanup, and a fresh launch/stop. See the
+[release validation record](../../docs/releases/v0.4-validation.md) for revisions
+and clean-checkout results. No APR or physical-board timing claim follows.
