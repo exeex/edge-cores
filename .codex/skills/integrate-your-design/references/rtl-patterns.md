@@ -1,169 +1,161 @@
 # RTL integration patterns
 
-Use these as structural examples, then confirm signal names and widths in the
-target checkout. They are distilled from `~/n906/src/edge-e3`; do not copy the
-private tree into a public release. These patterns are recommendations, not
-architectural requirements. A different design is valid when it preserves its
-own documented ordering, ownership, and memory-visibility contract.
+Use the public sources linked below and confirm the selected top/filelist.
+Excerpts illustrate local contracts, not complete replacement modules.
+Distinguish current product behavior from optional designs; see
+[execution model](execution-model.md) for lifecycle and
+[instruction interface](instruction-interface.md) for command encoding.
 
-## Contents
+## Current Edge-32 request/response path
 
-- [Snapshot-backed command issue](#snapshot-backed-command-issue)
-- [IFU/predecoder sync join](#ifupredecoder-sync-join)
-- [Self-serializing asynchronous starts](#self-serializing-asynchronous-starts)
-- [Recommended scalar-store interlock for bring-up](#recommended-scalar-store-interlock-for-bring-up)
-
-## Snapshot-backed command issue
-
-Store the decoded command separately from its resolved scalar operand. Match
-them with full sequence and epoch metadata even if the physical store is
-indexed by low sequence bits.
+E3's [dispatch](../../../../src/edge-e3/edge_core/rtl/edge_lite_accel_dispatch.v)
+connects Edge-32 to
+[`edge_asic_accel_owner`](../../../../src/edge-asic/rtl/control/edge_asic_accel_owner.v)
+and `edge_accel_pipe`. It fixes `cmd_seq_id` and `cmd_epoch` to zero rather
+than allocating tagged scalar placeholders. The owner uses:
 
 ```verilog
-wire operand_ready = !entry_needs_gpr[head]
-                   || (entry_snapshot_valid[head]
-                       && entry_snapshot_gpr_valid[head]);
-
-assign issue_valid = queue_head_live && operand_ready;
-assign issue_opcode8 = entry_opcode8[head];
-assign issue_imm8 = entry_imm8[head];
-assign issue_gpr_valid = queue_head_live && entry_needs_gpr[head];
-assign issue_gpr_value = issue_gpr_valid
-                       ? entry_snapshot_gpr_value[head] : '0;
-
-wire snapshot_matches_cmd =
-    snapshot_owner_seq_id[slot] == cmd_seq_id
- && snapshot_owner_epoch[slot] == cmd_epoch;
+wire cmd_fire = cmd_valid && cmd_ready;
+assign cmd_valid = req_valid && !resp_valid;
+assign req_ready = cmd_ready && !resp_valid;
+assign cmd_inst = req_inst;
+assign cmd_capture_valid = 1'b1;
+assign cmd_capture_value = req_capture_value;
 ```
 
-Support both arrival orders: snapshot before command and command before
-snapshot. Release the slot only when the command fires or is killed. Apply
-redirect kill using sequence and epoch; slot equality is insufficient because
-low sequence bits wrap.
+The owner registers `resp_valid` from `cmd_fire`, with the decoded error and
+optional result. It does not buffer an independent operand snapshot. The
+request producer must retain its instruction and resolved operand until
+acceptance. [Edge-32 completion](../../../../src/edge-32/rtl/ex/completion.svh)
+records `accel_req_fire` and completes the instruction only after
+`accel_started_q && accel_resp_valid`.
 
-In the private reference, see
-`edge_accel_cmd_queue/edge_accel_cmd_queue.v` for `n_operand_ready`,
-`issue_n_value`, `snapshot_matches_enqueue`, and
-`cmd_matches_pending_snapshot`.
+For a valid start, this response means the target accepted the descriptor,
+not that compute finished. For sync, the
+[pipe](../../../../src/edge-32/rtl/edge_accel_pipe.v) withholds target readiness
+until the corresponding Tensor/ACTU/CMPU stall clears or `dma_sync_done`
+asserts. Preserve that target-specific drain condition and the error response;
+do not turn decode errors into accelerator side effects.
 
-## IFU/predecoder sync join
+## Snapshot-backed issue for a tagged frontend
 
-Recognize each sync opcode in predecode and create a scalar pseudo instruction
-with no GPR source:
+Use this pattern only when the chosen frontend sends commands and operands
+separately. The public
+[`edge_accel_cmd_queue`](../../../../src/edge-e3/edge_accel_cmd_queue/edge_accel_cmd_queue.v)
+contains the actual signal names:
 
 ```verilog
-wire accel_sync_join = vector_valid && vector_is_accel &&
-    ((subop == TENSOR_SYNC) || (subop == DMA_SYNC) ||
-     (subop == ACTU_SYNC) || (subop == CUSTOM_SYNC));
-
-assign pseudo_kind = accel_sync_join ? PSEUDO_ACCEL_JOIN
-                                      : PSEUDO_ACCEL_GPR_HOLDER;
-assign pseudo_source_mask = accel_sync_join ? 3'b000 : 3'b001;
+assign n_operand_ready = !entry_n_capture_valid[head_ptr] ||
+                         (entry_snapshot_valid[head_ptr] &&
+                          entry_snapshot_n_valid[head_ptr]);
+assign issue_valid = head_live && n_operand_ready;
+assign issue_n_valid = head_live && entry_n_capture_valid[head_ptr];
+assign issue_n_value = issue_n_valid ? entry_snapshot_n_value[head_ptr] :
+                                     {VALUE_WIDTH{1'b0}};
+assign issue_fire = issue_valid && issue_ready;
 ```
 
-Allocate the pseudo operation with the sync command's sequence/epoch. Do not
-mark it complete at ordinary scalar issue. Complete it only when the accel
-pipe reports that same sync command done:
+`head_live` excludes redirect-killed entries. Check both command-first and
+snapshot-first arrival: `snapshot_matches_enqueue` and
+`cmd_matches_pending_snapshot` use full sequence/epoch ownership even though
+low sequence bits index a slot. Preserve the queue-entry operand and release
+matching ownership on issue or kill; slot equality alone fails after wrap.
+The current queue's `cmd_ready` is capacity-only, independent of command
+sequence and downstream readiness, to avoid feeding frontend bundle selection
+back into itself.
+
+For a frontend with scalar join placeholders, a sync join must have no GPR
+source and retain the command's sequence/epoch. Complete it only from the
+matching sync notification after the target drains, never ordinary scalar
+issue. This describes a tagged-frontend integration contract; the maintained
+Edge-32 path above has no such IFU pseudo-instruction mechanism. Do not copy
+historical private predecoder/core-top names as current wiring instructions.
+
+## Tensor start acceptance and handoff
+
+The maintained reference is
+[`edge_tensor_unit/edge_tensor_unit.v`](../../../../src/edge-e3/edge_tensor_unit/edge_tensor_unit.v),
+not the old `edge_tensor_unit_bank16` path. Its configuration gate is:
 
 ```verilog
-assign sync_done_valid = accel_done_valid &&
-                         (accel_done_subop == CUSTOM_SYNC);
-// Feed sync_done_valid/seq_id/epoch to the scalar placeholder completion path.
+assign cfg_cmd_ready = !queued_start_valid_q && !start_pending_q;
+assign tensor_cmd_ready = cfg_cmd_ready;
 ```
 
-This is why `edge_custom_sync()` must be added to the IFU/predecoder opcode
-classification as well as to the accelerator pipe. In the private reference,
-see `edge_predecoder.v` around `window_tensor_sync_join` and
-`edge_core_top.v` around `tensor_sync_done_valid`.
+`tensor_start_ready` excludes those same queued/pending states and additionally
+checks mode, scale and weight readiness. Inspect the full expression rather
+than using configuration readiness as start readiness.
 
-## Self-serializing asynchronous starts
-
-Keep active and pending descriptors separate. A pending descriptor must hold
-all values captured at start acceptance.
+The non-copy launch branches include:
 
 ```verilog
-wire pending_launch = pending_valid_q && engine_handoff_ready;
-wire pending_slot_available = !pending_valid_q || pending_launch;
-assign start_ready = pending_slot_available;
-wire start_accept = start_req && start_ready;
-wire start_direct = start_accept && engine_idle && !pending_valid_q;
-wire start_queue  = start_accept && !start_direct;
-
-always @(posedge clk or negedge reset_n) begin
-  if (!reset_n) begin
-    pending_valid_q <= 1'b0;
-  end else begin
-    if (pending_launch)
-      pending_valid_q <= 1'b0;
-    if (start_queue) begin
-      pending_valid_q <= 1'b1;
-      pending_in_q <= cfg_in_q;
-      pending_out_q <= cfg_out_q;
-      pending_count_q <= cfg_count_q;
-      pending_mode_q <= cfg_mode_q;
-    end
-  end
-end
+assign start_direct_accept =
+    start_accept && !copy_mode_req
+    && (weight_reuse_token_q || weight_loaded_q)
+    && !queued_start_valid_q && !engine_busy;
+assign start_queue_accept =
+    start_accept && !copy_mode_req
+    && (weight_reuse_token_q || weight_loaded_q)
+    && !queued_start_valid_q && engine_busy;
 ```
 
-Resolve simultaneous `pending_launch` and `start_queue` deliberately so the
-slot can refill without losing a cycle. Do not use live configuration
-registers for a queued job. Deassert ready when accepting another start would
-overwrite the pending descriptor. The tensor reference is
-`edge_tensor_unit/rtl/edge_tensor_unit_bank16.v`, especially
-`start_direct_accept`, `start_queue_accept`, `start_pending_*`, and
-`queued_start_*`.
+The distinct `start_wait_accept` branch captures work whose weights are still
+pending. Preserve the accepted descriptor's `start_pending_*` fields through
+`start_pending_direct_launch` or `start_pending_queue_launch`; do not substitute
+later live configuration. Copy-mode behavior is separate. Sync must account
+for queued/pending work and transport activity as well as `engine_busy`.
 
-This scheme permits:
+A new accelerator may implement a one-slot pending queue with simultaneous
+launch/refill, but that is an alternative design, not the current Tensor
+handshake. For such a design, derive acceptance from actual free capacity,
+select the old pending descriptor for launch, and give a newly accepted
+queued descriptor precedence over clearing the slot. Verify empty/direct,
+busy/enqueue, full/backpressure, launch/refill and reset cases together.
+Capture every job field and hold it stable until transfer. Do not assume the
+current Tensor slot can refill in the same cycle that a pending job launches.
 
-```cpp
-for (...) {
-    edge_custom_setin(next_in);
-    edge_custom_setout(next_out);
-    edge_custom_setn(next_n);
-    edge_custom_start();  // backpressures only when hardware lookahead is full
-}
-edge_custom_sync();       // one final join when software needs the results
-```
+Batching starts with one final sync is valid only while buffers remain live
+and inter-job dependencies permit it. Insert joins for buffer reuse or
+cross-engine consumers; see the example in [execution model](execution-model.md).
 
-Do not insert a sync after every start unless software consumes that job's
-result immediately.
+## Optional scalar-store interlock
 
-## Recommended scalar-store interlock for bring-up
+The public [arbiter](../../../../src/edge-e3/edge_dtcm_subsys/rtl/edge_dtcm_arb.v)
+retains `lsu_store_block` gating, but the current
+[Edge-32 platform](../../../../src/edge-e3/edge_core/rtl/edge_lite_accel_platform.v)
+ties `scalar_lsu_store_block` to zero. Do not describe this as an active global
+pause of competing engines in the product.
 
-This interlock mainly supports early software development. It lets a C++ test
-initialize or patch ASIC-visible SRAM with ordinary scalar stores, then start
-the ASIC without adding a custom initialization path. Blocking ASIC/DMA SRAM
-requests while such a store is pending prevents the accelerator from reading
-partially initialized or not-yet-visible data. That makes functional tests,
-debug sessions, and failure reproduction more deterministic.
-
-The interlock is not required for every product. It may be omitted when scalar
-code never writes the accelerator SRAM, when DMA is the only data producer, or
-when another ownership/fence protocol guarantees visibility. Performance
-software should normally use DMA rather than scalar stores.
-
-When choosing this bring-up convenience, apply it at the SRAM arbiter request
-boundary:
-
-Apply the LSU store interlock at the SRAM arbiter request boundary:
+If adding an interlock to a conventional ready/valid SRAM client, qualify
+both sides of the handshake. The following is conceptual, with placeholder
+signal names, not a drop-in E3 bank interface:
 
 ```verilog
-assign custom_bank_req = custom_raw_bank_req &
-                         {BANK_NUM{!lsu_store_block}};
-assign dma_req_to_sram = dma_req && !lsu_store_block;
-assign accel_load_req_to_sram = accel_load_req && !lsu_store_block;
-assign accel_store_req_to_sram = accel_store_req && !lsu_store_block;
+assign sram_valid = producer_valid && !store_block;
+assign producer_ready = sram_ready && !store_block;
+wire transfer = sram_valid && sram_ready;
+// Producer address/data/state advances only on transfer.
 ```
 
-Keep the request and its associated address/data/write-enable stable while
-blocked according to the producer's ready/valid contract. Do not allow an
-active accelerator to advance internal read/write counters for a request that
-the arbiter suppressed; otherwise the debug interlock itself can drop or
-misalign accesses.
+Masking only request while returning an unqualified ready can lose work.
+Keep the producer's payload stable while stalled. E3's scheduled H4/bank
+adapters have their own grant and response contracts: trace each selected
+compute, DMA, WLD and SLD path before applying a gate. Cover already-running
+and buffered requests, not just starts. If scalar acknowledgement precedes
+physical SRAM visibility, protect through the visibility point.
 
-The private reference applies this in
-`edge_dtcm_subsys/rtl/edge_dtcm_arb.v`: ACTU/tensor bank requests are masked,
-and DMA, SLD, and WLD requests are individually qualified. This protects both
-new starts and already-running engines from observing C++ initialization data
-too early.
+An interlock can simplify initialization/debug, but it does not replace
+DRAM cache publication/acquisition or application ownership. See
+[memory integration](memory-integration.md) for the active product limits.
+
+## Validate an implementation
+
+For changes based on these patterns, test request stability and single
+acceptance under stalls, response/error delivery, descriptor immutability,
+pending launch and complete drain. Add sequence wrap, both operand arrival
+orders and redirect kills only for a connected tagged frontend; add partial
+stores and in-flight transport checks when changing an interlock.
+
+Then use [public regression routing](../../../../tests/README.md) for the
+affected interface, examples and NNC paths. Passing a software case alone does
+not establish all queue-depth, reset or simultaneous-event corner cases.
