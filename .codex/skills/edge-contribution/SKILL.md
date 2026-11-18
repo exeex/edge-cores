@@ -1,12 +1,15 @@
 ---
 name: edge-contribution
-description: Prepare, validate, submit, triage, and review open-source contributions to the shared Edge RV framework in edge-cores. Use when contributors need to file a centralized edge-cores issue, fork the repository, modify public edge-rv RTL or related software, choose regression tests, write a structured GitHub pull request, respond to review, or provide evidence suitable for human and agent-assisted issue and PR review.
+description: Prepare, validate, submit, triage, and review contributions to edge-cores and its public E3, Edge-32, ASIC and NNC integrations. Use for centralized issues, contributor forks, RTL/software changes, regression selection, GitHub pull requests and evidence-backed review.
 ---
 
 # Contribute to Edge RV
 
-Help the community evolve the shared public Edge RV framework through small,
-tested, reviewable pull requests.
+Help the community evolve edge-cores through small, tested, reviewable pull
+requests. The maintained public product combines E3, Edge-32 and shared ASIC
+RTL with NNC compiler/runtime software. Historical `edge-rv` and `edge-rv-lite`
+trees are not current submodules; inspect `.gitmodules` and the selected
+filelist before assigning implementation or test ownership.
 
 ## Work through a fork
 
@@ -17,6 +20,12 @@ tested, reviewable pull requests.
 4. Keep unrelated changes out of the branch. Never commit build products,
    private RTL, credentials, or generated reports.
 5. Modify public RTL in `src/edge-e3`, `src/edge-32` or `src/edge-asic`.
+   NNC compiler/runtime changes belong in `src/edge-nnc`; workspace integration
+   changes belong in the parent repository. Commit submodule changes in their
+   owning repository and record the intended gitlink in edge-cores. A parent
+   commit alone does not include modified submodule files. When publication is
+   authorized, make referenced submodule commits accessible before publishing
+   a parent pin; verify the combined revisions from a clean checkout.
    Private repositories mainly hold internal tests such as `src/test-e3`;
    preserve that boundary and keep the public build independent of them.
 6. Rebase or merge current `upstream/main`, rerun affected tests, push the
@@ -45,27 +54,35 @@ has authorized that external action.
 
 ## Make a reviewable change
 
-- Read `CONTRIBUTING.md` and `LICENSING.md` before editing. Contributions to
+- Read [CONTRIBUTING.md](../../../CONTRIBUTING.md) and
+  [LICENSING.md](../../../LICENSING.md) before editing. Contributions to
   files maintained directly by edge-cores use `Apache-2.0`; contributions to a
-  submodule use that submodule's license, including `CERN-OHL-P-2.0` for
-  `src/edge-rv`.
+  submodule use that component's license. Check the actual changed files:
+  Edge-32 RTL uses `CERN-OHL-P-2.0`, E3 RTL has its own hardware license, and
+  E3 SDK software and NNC use Apache-2.0. For shared ASIC leaves consult their
+  `LICENSE.md`; do not infer one license for the entire checkout.
 - State the problem and why it belongs in the shared Edge RV framework.
 - Prefer one architectural idea or bug fix per PR.
 - Add or update a focused test that fails without the change when practical.
 - Preserve instruction encodings, module ports, parameter defaults, and
-  software ABI unless the PR explicitly proposes a migration.
+  software ABI unless the PR explicitly proposes a migration. Include physical
+  tensor layout (`io_layout.json`) and CPU/DMA ownership in compatibility
+  review when those surfaces change.
 - Document correctness, performance, area, or complexity tradeoffs instead of
   presenting an optimization as universally better.
 - Treat existing user changes as owned work; do not rewrite unrelated files.
 
 ## Validate before submission
 
-Read [references/test-matrix.md](references/test-matrix.md), select tests from
-the changed surfaces, and run the smallest relevant test first. A ready PR
+Read [references/test-matrix.md](references/test-matrix.md) and the current
+[regression routing](../../../tests/README.md), select tests from the changed
+surfaces, and run the smallest relevant test first. Confirm commands against
+`tests/run.sh` and its adapters when older guidance differs. A ready PR
 must report exact commands and outcomes. Use a Draft PR when important tests
 remain unavailable or failing, and explain why.
 
-For changes to public `src/edge-rv` RTL, run at least:
+For changes to the public E3/Edge-32/shared ASIC integration, build the
+reviewed RTL and run the basic public examples:
 
 ```sh
 ./scripts/build-verilator.sh
@@ -74,7 +91,29 @@ For changes to public `src/edge-rv` RTL, run at least:
 ./example/actu/run.sh
 ```
 
-Add compiler/runtime and Llama regressions when those surfaces are affected.
+Also select coverage by boundary:
+
+- Intrinsic/runtime/RTL compatibility: `./tests/run.sh interface` plus affected
+  examples. The interface runner rebuilds the simulator by default; only use
+  `--skip-verilator-build` with a simulator built from the reviewed sources.
+- NNC lowering: `PYTHON=.venv/bin/python ./tests/run.sh nnc-unit` and affected
+  smoke models. Prepare the environment with `./scripts/setup-python.sh`.
+- Runtime, layout, allocator, DMA ownership or composed models:
+  `./tests/run.sh nnc`, including unit discovery, the model harness and packed
+  C++/cache-ownership regressions. `example/llama/test.sh` delegates here.
+- Broad cross-layer changes: `./tests/run.sh all`, which includes NNC,
+  interface and independent examples and reports individual failures.
+- Documentation/skill-only changes: local link/format checks and
+  `git diff --check`; a full RTL build is unnecessary.
+
+Keep NNC semantic fixtures and goldens in NNC and workspace interface
+sentinels in `tests/interface`. Inspect `build/tests/<group>/summary.tsv`,
+the NNC harness report and relevant per-case logs. Require the runner's
+completion and numerical markers, not just shell success; see the
+[software harness](../software-harness/SKILL.md) for details. Record component
+revisions and distinguish newly executed evidence from historical release
+results. Generated logs and binaries remain local build products.
+
 Do not write “all tests pass” unless the listed commands actually completed
 successfully. Do not require private test repositories to make a public regression pass.
 
@@ -86,7 +125,7 @@ the implementation from chat history. Include:
 
 - problem, motivation, and scope;
 - architectural, encoding, ABI, or compatibility impact;
-- exact validation commands and PASS/FAIL results;
+- exact validation commands and PASS / FAIL / NOT RUN results;
 - untested cases, known limitations, and risk;
 - generated artifacts or benchmark assumptions, when relevant; and
 - specific areas where review attention is requested.
